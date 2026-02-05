@@ -23,20 +23,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
-
-        System.out.println(">>> JWT FILTER HIT: " + request.getServletPath());
+            FilterChain filterChain
+    ) throws ServletException, IOException {
+        System.out.println("JWT FILTER HIT → " + request.getMethod() + " " + request.getServletPath());
 
         String path = request.getServletPath();
 
+        // Public endpoints
         if (path.startsWith("/auth") || path.startsWith("/test")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String authHeader = request.getHeader("Authorization");
-        System.out.println(">>> AUTH HEADER: " + authHeader);
+
+        //String authHeader = request.getHeader("Authorization");
+        System.out.println("Authorization header = " + authHeader);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -46,16 +48,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
         String email = jwtUtil.extractEmail(token);
 
-        System.out.println(">>> EMAIL FROM TOKEN: " + email);
-
         var userDetails = userDetailsService.loadUserByUsername(email);
 
         var authentication = new UsernamePasswordAuthenticationToken(
-                userDetails, null, userDetails.getAuthorities());
+                userDetails,
+                null,
+                userDetails.getAuthorities()
+        );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         filterChain.doFilter(request, response);
     }
-
 }
