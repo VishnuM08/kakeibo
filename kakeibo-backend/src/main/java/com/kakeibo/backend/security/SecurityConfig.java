@@ -24,13 +24,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors()
+                .and()
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm ->
                         sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/login", "/test/**").permitAll()
+                        //.requestMatchers("/auth/login", "/test/**").permitAll()
+                        .requestMatchers("/auth/login","/auth/register", "/auth/me", "/test/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(

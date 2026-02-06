@@ -1,6 +1,6 @@
 /**
  * API Service Layer for Spring Boot Backend Integration
- * 
+ *
  * BACKEND INTEGRATION NOTES:
  * - Base URL should be configured via environment variable (e.g., VITE_API_BASE_URL)
  * - All requests should include JWT token in Authorization header
@@ -9,6 +9,30 @@
  */
 
 // ==================== TYPE DEFINITIONS ====================
+
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: "http://localhost:8080",
+});
+
+// ✅ THIS IS THE FIX
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("jwt_token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+export default api;
+
+export async function getMe() {
+  const response = await api.get("/auth/me");
+  return response.data; // { id, email, name }
+}
 
 export interface User {
   id: string;
@@ -22,14 +46,33 @@ export interface Expense {
   description: string;
   category: string;
   amount: number;
-  date: string;
+  expenseDate: string;
   notes?: string; // Optional expense notes
   receiptUrl?: string; // URL to receipt image stored in backend
   isRecurring: boolean;
-  recurringFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurringFrequency?: "daily" | "weekly" | "monthly" | "yearly";
   userId: string; // Foreign key to user
   createdAt: string;
   updatedAt: string;
+}
+
+import { LucideIcon } from "lucide-react";
+
+export interface UIExpense {
+  id: string;
+  description: string;
+  category: string;
+  amount: number;
+  date: string;
+
+  // UI-only fields
+  icon: LucideIcon;
+  color: string;
+  time: string;
+
+  // optional UI fields
+  notes?: string;
+  receiptUrl?: string;
 }
 
 export interface CustomCategory {
@@ -72,7 +115,7 @@ export interface RecurringExpense {
   description: string;
   category: string;
   amount: number;
-  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  frequency: "daily" | "weekly" | "monthly" | "yearly";
   startDate: string;
   endDate?: string; // Optional end date
   lastGenerated?: string; // Last date when expense was auto-generated
@@ -102,28 +145,32 @@ export interface RegisterRequest {
 
 // TODO: Move to environment variable
 // For Vite projects, use import.meta.env instead of process.env
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:8080/api';
+
+/*
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
+  "http://localhost:8080/api";
 
 /**
  * Get JWT token from localStorage
  * BACKEND INTEGRATION: Token will be stored after successful login
  */
 const getAuthToken = (): string | null => {
-  return localStorage.getItem('jwt_token');
+  return localStorage.getItem("jwt_token");
 };
 
 /**
  * Set JWT token in localStorage
  */
 const setAuthToken = (token: string): void => {
-  localStorage.setItem('jwt_token', token);
+  localStorage.setItem("jwt_token", token);
 };
 
 /**
  * Remove JWT token from localStorage (logout)
  */
 const removeAuthToken = (): void => {
-  localStorage.removeItem('jwt_token');
+  localStorage.removeItem("jwt_token");
 };
 
 /**
@@ -133,7 +180,7 @@ const removeAuthToken = (): void => {
 const getAuthHeaders = (): HeadersInit => {
   const token = getAuthToken();
   return {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
   };
 };
@@ -144,7 +191,7 @@ const getAuthHeaders = (): HeadersInit => {
  */
 async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -160,18 +207,18 @@ async function apiRequest<T>(
       // Token expired or invalid
       removeAuthToken();
       // Redirect to login or trigger refresh token flow
-      window.location.href = '/login';
-      throw new Error('Unauthorized');
+      window.location.href = "/login";
+      throw new Error("Unauthorized");
     }
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'API request failed');
+      throw new Error(error.message || "API request failed");
     }
 
     return await response.json();
   } catch (error) {
-    console.error('API Request Error:', error);
+    console.error("API Request Error:", error);
     throw error;
   }
 }
@@ -182,6 +229,8 @@ async function apiRequest<T>(
  * Login API
  * TODO: BACKEND INTEGRATION - POST /api/auth/login
  */
+
+/*
 export async function login(credentials: { email: string; password: string }): Promise<{ token: string; user: any }> {
   // Mock implementation for now
   return new Promise((resolve) => {
@@ -195,6 +244,7 @@ export async function login(credentials: { email: string; password: string }): P
         },
       });
     }, 500);
+ 
   });
   
   // TODO: BACKEND INTEGRATION - Replace with actual API call
@@ -207,25 +257,39 @@ export async function login(credentials: { email: string; password: string }): P
   // return response.json();
 }
 
+*/
+
+// services/api.ts
+export async function login(credentials: { email: string; password: string }) {
+  const response = await api.post("/auth/login", credentials);
+  return response.data; // { token }
+}
+
 /**
  * Register API
  * TODO: BACKEND INTEGRATION - POST /api/auth/register
  */
-export async function register(userData: { email: string; password: string; name: string }): Promise<{ token: string; user: any }> {
+
+/*
+export async function register(userData: {
+  email: string;
+  password: string;
+  name: string;
+}): Promise<{ token: string; user: any }> {
   // Mock implementation for now
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
-        token: 'mock_jwt_token_' + Date.now(),
+        token: "mock_jwt_token_" + Date.now(),
         user: {
-          id: '1',
+          id: "1",
           name: userData.name,
           email: userData.email,
         },
       });
     }, 500);
   });
-  
+
   // TODO: BACKEND INTEGRATION - Replace with actual API call
   // const response = await fetch('/api/auth/register', {
   //   method: 'POST',
@@ -234,6 +298,15 @@ export async function register(userData: { email: string; password: string; name
   // });
   // if (!response.ok) throw new Error('Registration failed');
   // return response.json();
+}
+*/
+export async function register(userData: {
+  email: string;
+  password: string;
+  name: string;
+}) {
+  const response = await api.post("/auth/register", userData);
+  return response.data; // { token }
 }
 
 /**
@@ -247,7 +320,7 @@ export async function logout(): Promise<void> {
       resolve();
     }, 300);
   });
-  
+
   // TODO: BACKEND INTEGRATION - Replace with actual API call
   // const token = localStorage.getItem('jwt_token');
   // await fetch('/api/auth/logout', {
@@ -261,17 +334,19 @@ export async function logout(): Promise<void> {
 /**
  * POST /auth/refresh
  * Refresh JWT token using refresh token
- * 
+ *
  * BACKEND ENDPOINT: POST /api/auth/refresh
  * REQUEST BODY: { refreshToken: string }
  * RESPONSE: { token: string, refreshToken: string }
  */
-export async function refreshToken(refreshToken: string): Promise<AuthResponse> {
+export async function refreshToken(
+  refreshToken: string,
+): Promise<AuthResponse> {
   // TODO: Implement refresh token flow
-  console.log('[API] Refresh token request');
-  
-  return apiRequest<AuthResponse>('/auth/refresh', {
-    method: 'POST',
+  console.log("[API] Refresh token request");
+
+  return apiRequest<AuthResponse>("/auth/refresh", {
+    method: "POST",
     body: JSON.stringify({ refreshToken }),
   });
 }
@@ -281,59 +356,71 @@ export async function refreshToken(refreshToken: string): Promise<AuthResponse> 
 /**
  * GET /expenses
  * Fetch all expenses for authenticated user
- * 
+ *
  * BACKEND ENDPOINT: GET /api/expenses?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&category=food
  * RESPONSE: Expense[]
  */
+/*
 export async function getExpenses(filters?: {
   startDate?: string;
   endDate?: string;
   category?: string;
 }): Promise<Expense[]> {
   // TODO: Replace with actual API call
-  console.log('[API] Get expenses with filters:', filters);
-  
+  console.log("[API] Get expenses with filters:", filters);
+
   // Return mock data from localStorage for now
-  const stored = localStorage.getItem('kakeibo_expenses');
-  return stored ? JSON.parse(stored) : [];
-  
+  //const stored = localStorage.getItem("kakeibo_expenses");
+  //return stored ? JSON.parse(stored) : [];
+  const response = await api.get("/expenses");
+  return response.data;
   // Actual implementation:
   // const queryParams = new URLSearchParams(filters as any).toString();
   // return apiRequest<Expense[]>(`/expenses?${queryParams}`);
 }
 
-/**
- * POST /expenses
- * Create new expense
- * 
- * BACKEND ENDPOINT: POST /api/expenses
- * REQUEST BODY: Omit<Expense, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
- * RESPONSE: Expense
- */
-export async function createExpense(expense: Omit<Expense, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Expense> {
-  // TODO: Replace with actual API call
-  console.log('[API] Create expense:', expense);
-  
-  return apiRequest<Expense>('/expenses', {
-    method: 'POST',
-    body: JSON.stringify(expense),
-  });
+*/
+export async function getExpenses(): Promise<Expense[]> {
+  const response = await api.get("/expenses");
+  return response.data; // ✅ MUST RETURN
 }
 
 /**
+ * POST /expenses
+ * Create new expense
+ *
+ * BACKEND ENDPOINT: POST /api/expenses
+ * REQUEST BODY: Omit<Expense, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+ * RESPONSE: Expense
+ 
+*/
+
+export async function createExpense(expense: {
+  description: string;
+  category: string;
+  amount: number;
+  expenseDate: string;
+}) {
+  const response = await api.post("/expenses", expense);
+  return response.data;
+}
+/**
  * PUT /expenses/:id
  * Update existing expense
- * 
+ *
  * BACKEND ENDPOINT: PUT /api/expenses/{id}
  * REQUEST BODY: Partial<Expense>
  * RESPONSE: Expense
  */
-export async function updateExpense(id: string, updates: Partial<Expense>): Promise<Expense> {
+export async function updateExpense(
+  id: string,
+  updates: Partial<Expense>,
+): Promise<Expense> {
   // TODO: Replace with actual API call
-  console.log('[API] Update expense:', id, updates);
-  
+  console.log("[API] Update expense:", id, updates);
+
   return apiRequest<Expense>(`/expenses/${id}`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify(updates),
   });
 }
@@ -341,43 +428,43 @@ export async function updateExpense(id: string, updates: Partial<Expense>): Prom
 /**
  * DELETE /expenses/:id
  * Delete expense
- * 
+ *
  * BACKEND ENDPOINT: DELETE /api/expenses/{id}
  * RESPONSE: { success: boolean, message: string }
  */
 export async function deleteExpense(id: string): Promise<void> {
   // TODO: Replace with actual API call
-  console.log('[API] Delete expense:', id);
-  
+  console.log("[API] Delete expense:", id);
+
   return apiRequest<void>(`/expenses/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
 }
 
 /**
  * POST /expenses/upload-receipt
  * Upload receipt image
- * 
+ *
  * BACKEND ENDPOINT: POST /api/expenses/upload-receipt
  * REQUEST BODY: FormData with file
  * RESPONSE: { url: string }
  */
 export async function uploadReceipt(file: File): Promise<string> {
   // TODO: Replace with actual API call
-  console.log('[API] Upload receipt:', file.name);
-  
+  console.log("[API] Upload receipt:", file.name);
+
   const formData = new FormData();
-  formData.append('receipt', file);
-  
+  formData.append("receipt", file);
+
   const token = getAuthToken();
   const response = await fetch(`${API_BASE_URL}/expenses/upload-receipt`, {
-    method: 'POST',
+    method: "POST",
     headers: {
       ...(token && { Authorization: `Bearer ${token}` }),
     },
     body: formData,
   });
-  
+
   const data = await response.json();
   return data.url;
 }
@@ -387,17 +474,17 @@ export async function uploadReceipt(file: File): Promise<string> {
 /**
  * GET /recurring-expenses
  * Fetch all recurring expenses for authenticated user
- * 
+ *
  * BACKEND ENDPOINT: GET /api/recurring-expenses
  * RESPONSE: RecurringExpense[]
  */
 export async function getRecurringExpenses(): Promise<RecurringExpense[]> {
   // TODO: Replace with actual API call
-  console.log('[API] Get recurring expenses');
-  
-  const stored = localStorage.getItem('kakeibo_recurring_expenses');
+  console.log("[API] Get recurring expenses");
+
+  const stored = localStorage.getItem("kakeibo_recurring_expenses");
   return stored ? JSON.parse(stored) : [];
-  
+
   // Actual implementation:
   // return apiRequest<RecurringExpense[]>('/recurring-expenses');
 }
@@ -405,19 +492,19 @@ export async function getRecurringExpenses(): Promise<RecurringExpense[]> {
 /**
  * POST /recurring-expenses
  * Create new recurring expense
- * 
+ *
  * BACKEND ENDPOINT: POST /api/recurring-expenses
  * REQUEST BODY: Omit<RecurringExpense, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
  * RESPONSE: RecurringExpense
  */
 export async function createRecurringExpense(
-  expense: Omit<RecurringExpense, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+  expense: Omit<RecurringExpense, "id" | "userId" | "createdAt" | "updatedAt">,
 ): Promise<RecurringExpense> {
   // TODO: Replace with actual API call
-  console.log('[API] Create recurring expense:', expense);
-  
-  return apiRequest<RecurringExpense>('/recurring-expenses', {
-    method: 'POST',
+  console.log("[API] Create recurring expense:", expense);
+
+  return apiRequest<RecurringExpense>("/recurring-expenses", {
+    method: "POST",
     body: JSON.stringify(expense),
   });
 }
@@ -425,20 +512,20 @@ export async function createRecurringExpense(
 /**
  * PUT /recurring-expenses/:id
  * Update recurring expense
- * 
+ *
  * BACKEND ENDPOINT: PUT /api/recurring-expenses/{id}
  * REQUEST BODY: Partial<RecurringExpense>
  * RESPONSE: RecurringExpense
  */
 export async function updateRecurringExpense(
   id: string,
-  updates: Partial<RecurringExpense>
+  updates: Partial<RecurringExpense>,
 ): Promise<RecurringExpense> {
   // TODO: Replace with actual API call
-  console.log('[API] Update recurring expense:', id, updates);
-  
+  console.log("[API] Update recurring expense:", id, updates);
+
   return apiRequest<RecurringExpense>(`/recurring-expenses/${id}`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify(updates),
   });
 }
@@ -446,15 +533,15 @@ export async function updateRecurringExpense(
 /**
  * DELETE /recurring-expenses/:id
  * Delete recurring expense
- * 
+ *
  * BACKEND ENDPOINT: DELETE /api/recurring-expenses/{id}
  */
 export async function deleteRecurringExpense(id: string): Promise<void> {
   // TODO: Replace with actual API call
-  console.log('[API] Delete recurring expense:', id);
-  
+  console.log("[API] Delete recurring expense:", id);
+
   return apiRequest<void>(`/recurring-expenses/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
 }
 
@@ -463,26 +550,26 @@ export async function deleteRecurringExpense(id: string): Promise<void> {
 /**
  * GET /budgets/current
  * Get budget for current month
- * 
+ *
  * BACKEND ENDPOINT: GET /api/budgets/current
  * RESPONSE: Budget | null
  */
 export async function getCurrentBudget(): Promise<Budget | null> {
   // TODO: Replace with actual API call
-  console.log('[API] Get current budget');
-  
-  const stored = localStorage.getItem('kakeibo_monthly_budget');
+  console.log("[API] Get current budget");
+
+  const stored = localStorage.getItem("kakeibo_monthly_budget");
   if (!stored) return null;
-  
+
   return {
-    id: 'budget-1',
-    userId: 'user-1',
+    id: "budget-1",
+    userId: "user-1",
     monthlyAmount: parseFloat(stored),
     month: new Date().toISOString().slice(0, 7),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  
+
   // Actual implementation:
   // return apiRequest<Budget>('/budgets/current');
 }
@@ -490,17 +577,20 @@ export async function getCurrentBudget(): Promise<Budget | null> {
 /**
  * POST /budgets
  * Set or update budget
- * 
+ *
  * BACKEND ENDPOINT: POST /api/budgets
  * REQUEST BODY: { monthlyAmount: number, month: string }
  * RESPONSE: Budget
  */
-export async function setBudget(amount: number, month: string): Promise<Budget> {
+export async function setBudget(
+  amount: number,
+  month: string,
+): Promise<Budget> {
   // TODO: Replace with actual API call
-  console.log('[API] Set budget:', amount, month);
-  
-  return apiRequest<Budget>('/budgets', {
-    method: 'POST',
+  console.log("[API] Set budget:", amount, month);
+
+  return apiRequest<Budget>("/budgets", {
+    method: "POST",
     body: JSON.stringify({ monthlyAmount: amount, month }),
   });
 }
@@ -510,17 +600,17 @@ export async function setBudget(amount: number, month: string): Promise<Budget> 
 /**
  * GET /savings-goals
  * Fetch all savings goals
- * 
+ *
  * BACKEND ENDPOINT: GET /api/savings-goals
  * RESPONSE: SavingsGoal[]
  */
 export async function getSavingsGoals(): Promise<SavingsGoal[]> {
   // TODO: Replace with actual API call
-  console.log('[API] Get savings goals');
-  
-  const stored = localStorage.getItem('kakeibo_savings_goals');
+  console.log("[API] Get savings goals");
+
+  const stored = localStorage.getItem("kakeibo_savings_goals");
   return stored ? JSON.parse(stored) : [];
-  
+
   // Actual implementation:
   // return apiRequest<SavingsGoal[]>('/savings-goals');
 }
@@ -528,19 +618,19 @@ export async function getSavingsGoals(): Promise<SavingsGoal[]> {
 /**
  * POST /savings-goals
  * Create new savings goal
- * 
+ *
  * BACKEND ENDPOINT: POST /api/savings-goals
  * REQUEST BODY: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
  * RESPONSE: SavingsGoal
  */
 export async function createSavingsGoal(
-  goal: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+  goal: Omit<SavingsGoal, "id" | "userId" | "createdAt" | "updatedAt">,
 ): Promise<SavingsGoal> {
   // TODO: Replace with actual API call
-  console.log('[API] Create savings goal:', goal);
-  
-  return apiRequest<SavingsGoal>('/savings-goals', {
-    method: 'POST',
+  console.log("[API] Create savings goal:", goal);
+
+  return apiRequest<SavingsGoal>("/savings-goals", {
+    method: "POST",
     body: JSON.stringify(goal),
   });
 }
@@ -548,20 +638,20 @@ export async function createSavingsGoal(
 /**
  * PUT /savings-goals/:id
  * Update savings goal (e.g., add to currentAmount)
- * 
+ *
  * BACKEND ENDPOINT: PUT /api/savings-goals/{id}
  * REQUEST BODY: Partial<SavingsGoal>
  * RESPONSE: SavingsGoal
  */
 export async function updateSavingsGoal(
   id: string,
-  updates: Partial<SavingsGoal>
+  updates: Partial<SavingsGoal>,
 ): Promise<SavingsGoal> {
   // TODO: Replace with actual API call
-  console.log('[API] Update savings goal:', id, updates);
-  
+  console.log("[API] Update savings goal:", id, updates);
+
   return apiRequest<SavingsGoal>(`/savings-goals/${id}`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify(updates),
   });
 }
@@ -569,15 +659,15 @@ export async function updateSavingsGoal(
 /**
  * DELETE /savings-goals/:id
  * Delete savings goal
- * 
+ *
  * BACKEND ENDPOINT: DELETE /api/savings-goals/{id}
  */
 export async function deleteSavingsGoal(id: string): Promise<void> {
   // TODO: Replace with actual API call
-  console.log('[API] Delete savings goal:', id);
-  
+  console.log("[API] Delete savings goal:", id);
+
   return apiRequest<void>(`/savings-goals/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
 }
 
@@ -586,17 +676,17 @@ export async function deleteSavingsGoal(id: string): Promise<void> {
 /**
  * GET /categories
  * Fetch all custom categories for user
- * 
+ *
  * BACKEND ENDPOINT: GET /api/categories
  * RESPONSE: CustomCategory[]
  */
 export async function getCustomCategories(): Promise<CustomCategory[]> {
   // TODO: Replace with actual API call
-  console.log('[API] Get custom categories');
-  
-  const stored = localStorage.getItem('kakeibo_custom_categories');
+  console.log("[API] Get custom categories");
+
+  const stored = localStorage.getItem("kakeibo_custom_categories");
   return stored ? JSON.parse(stored) : [];
-  
+
   // Actual implementation:
   // return apiRequest<CustomCategory[]>('/categories');
 }
@@ -604,19 +694,19 @@ export async function getCustomCategories(): Promise<CustomCategory[]> {
 /**
  * POST /categories
  * Create new custom category
- * 
+ *
  * BACKEND ENDPOINT: POST /api/categories
  * REQUEST BODY: Omit<CustomCategory, 'id' | 'userId' | 'createdAt'>
  * RESPONSE: CustomCategory
  */
 export async function createCustomCategory(
-  category: Omit<CustomCategory, 'id' | 'userId' | 'createdAt'>
+  category: Omit<CustomCategory, "id" | "userId" | "createdAt">,
 ): Promise<CustomCategory> {
   // TODO: Replace with actual API call
-  console.log('[API] Create custom category:', category);
-  
-  return apiRequest<CustomCategory>('/categories', {
-    method: 'POST',
+  console.log("[API] Create custom category:", category);
+
+  return apiRequest<CustomCategory>("/categories", {
+    method: "POST",
     body: JSON.stringify(category),
   });
 }
@@ -624,20 +714,20 @@ export async function createCustomCategory(
 /**
  * PUT /categories/:id
  * Update custom category
- * 
+ *
  * BACKEND ENDPOINT: PUT /api/categories/{id}
  * REQUEST BODY: Partial<CustomCategory>
  * RESPONSE: CustomCategory
  */
 export async function updateCustomCategory(
   id: string,
-  updates: Partial<CustomCategory>
+  updates: Partial<CustomCategory>,
 ): Promise<CustomCategory> {
   // TODO: Replace with actual API call
-  console.log('[API] Update custom category:', id, updates);
-  
+  console.log("[API] Update custom category:", id, updates);
+
   return apiRequest<CustomCategory>(`/categories/${id}`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify(updates),
   });
 }
@@ -645,15 +735,15 @@ export async function updateCustomCategory(
 /**
  * DELETE /categories/:id
  * Delete custom category
- * 
+ *
  * BACKEND ENDPOINT: DELETE /api/categories/{id}
  */
 export async function deleteCustomCategory(id: string): Promise<void> {
   // TODO: Replace with actual API call
-  console.log('[API] Delete custom category:', id);
-  
+  console.log("[API] Delete custom category:", id);
+
   return apiRequest<void>(`/categories/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
 }
 
@@ -662,29 +752,35 @@ export async function deleteCustomCategory(id: string): Promise<void> {
 /**
  * GET /expenses/export
  * Export expenses as CSV
- * 
+ *
  * BACKEND ENDPOINT: GET /api/expenses/export?format=csv&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
  * RESPONSE: Blob (CSV file)
  */
-export async function exportExpenses(format: 'csv' | 'pdf', filters?: {
-  startDate?: string;
-  endDate?: string;
-}): Promise<Blob> {
+export async function exportExpenses(
+  format: "csv" | "pdf",
+  filters?: {
+    startDate?: string;
+    endDate?: string;
+  },
+): Promise<Blob> {
   // TODO: Replace with actual API call that returns file blob
-  console.log('[API] Export expenses:', format, filters);
-  
+  console.log("[API] Export expenses:", format, filters);
+
   const token = getAuthToken();
   const queryParams = new URLSearchParams({
     format,
     ...(filters as any),
   }).toString();
-  
-  const response = await fetch(`${API_BASE_URL}/expenses/export?${queryParams}`, {
-    headers: {
-      ...(token && { Authorization: `Bearer ${token}` }),
+
+  const response = await fetch(
+    `${API_BASE_URL}/expenses/export?${queryParams}`,
+    {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
     },
-  });
-  
+  );
+
   return await response.blob();
 }
 
@@ -693,31 +789,31 @@ export async function exportExpenses(format: 'csv' | 'pdf', filters?: {
 /**
  * GET /user/profile
  * Get user profile information
- * 
+ *
  * BACKEND ENDPOINT: GET /api/user/profile
  * RESPONSE: User
  */
 export async function getUserProfile(): Promise<User> {
   // TODO: Replace with actual API call
-  console.log('[API] Get user profile');
-  
-  return apiRequest<User>('/user/profile');
+  console.log("[API] Get user profile");
+
+  return apiRequest<User>("/user/profile");
 }
 
 /**
  * PUT /user/profile
  * Update user profile
- * 
+ *
  * BACKEND ENDPOINT: PUT /api/user/profile
  * REQUEST BODY: Partial<User>
  * RESPONSE: User
  */
 export async function updateUserProfile(updates: Partial<User>): Promise<User> {
   // TODO: Replace with actual API call
-  console.log('[API] Update user profile:', updates);
-  
-  return apiRequest<User>('/user/profile', {
-    method: 'PUT',
+  console.log("[API] Update user profile:", updates);
+
+  return apiRequest<User>("/user/profile", {
+    method: "PUT",
     body: JSON.stringify(updates),
   });
 }
@@ -725,20 +821,20 @@ export async function updateUserProfile(updates: Partial<User>): Promise<User> {
 /**
  * POST /user/pin
  * Set or update PIN for biometric lock
- * 
+ *
  * BACKEND ENDPOINT: POST /api/user/pin
  * REQUEST BODY: { pin: string }
  * RESPONSE: { success: boolean }
  */
 export async function setUserPin(pin: string): Promise<void> {
   // TODO: Replace with actual API call
-  console.log('[API] Set user PIN');
-  
+  console.log("[API] Set user PIN");
+
   // For now, store encrypted PIN in localStorage
   // In production, this should be handled securely on backend
   const hashedPin = btoa(pin); // Simple encoding, use proper hashing in backend
-  localStorage.setItem('kakeibo_user_pin', hashedPin);
-  
+  localStorage.setItem("kakeibo_user_pin", hashedPin);
+
   // Actual implementation:
   // return apiRequest<void>('/user/pin', {
   //   method: 'POST',
@@ -749,20 +845,20 @@ export async function setUserPin(pin: string): Promise<void> {
 /**
  * POST /user/verify-pin
  * Verify user PIN
- * 
+ *
  * BACKEND ENDPOINT: POST /api/user/verify-pin
  * REQUEST BODY: { pin: string }
  * RESPONSE: { valid: boolean }
  */
 export async function verifyUserPin(pin: string): Promise<boolean> {
   // TODO: Replace with actual API call
-  console.log('[API] Verify user PIN');
-  
-  const stored = localStorage.getItem('kakeibo_user_pin');
+  console.log("[API] Verify user PIN");
+
+  const stored = localStorage.getItem("kakeibo_user_pin");
   if (!stored) return false;
-  
+
   return btoa(pin) === stored;
-  
+
   // Actual implementation:
   // const result = await apiRequest<{ valid: boolean }>('/user/verify-pin', {
   //   method: 'POST',

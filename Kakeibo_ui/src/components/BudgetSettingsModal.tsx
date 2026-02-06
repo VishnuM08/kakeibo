@@ -1,5 +1,5 @@
-import { X, Target } from 'lucide-react';
-import { useState } from 'react';
+import { X, Target } from "lucide-react";
+import { useState } from "react";
 
 interface BudgetSettingsModalProps {
   isOpen: boolean;
@@ -9,20 +9,20 @@ interface BudgetSettingsModalProps {
   isDarkMode?: boolean;
 }
 
-export function BudgetSettingsModal({ 
-  isOpen, 
-  onClose, 
+export function BudgetSettingsModal({
+  isOpen,
+  onClose,
   currentBudget,
   onSaveBudget,
-  isDarkMode
+  isDarkMode,
 }: BudgetSettingsModalProps) {
-  const [budget, setBudget] = useState(currentBudget?.toString() || '');
+  const [budget, setBudget] = useState(currentBudget?.toString() || "");
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const numBudget = parseFloat(budget);
     if (isNaN(numBudget) || numBudget <= 0) {
       return;
@@ -62,7 +62,8 @@ export function BudgetSettingsModal({
 
         {/* Description */}
         <p className="text-[15px] text-black/60 mb-6">
-          Set your monthly spending limit. You'll receive warnings when approaching or exceeding this amount.
+          Set your monthly spending limit. You'll receive warnings when
+          approaching or exceeding this amount.
         </p>
 
         {/* Form */}
@@ -74,11 +75,11 @@ export function BudgetSettingsModal({
             </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[24px] text-black font-semibold">
-                $
+                ₹
               </span>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
                 placeholder="1000.00"
@@ -91,7 +92,9 @@ export function BudgetSettingsModal({
           {/* Info Box */}
           <div className="bg-[#fff3cd] border border-[#ffc107]/30 rounded-[12px] p-4">
             <p className="text-[13px] text-[#856404] leading-relaxed">
-              💡 <span className="font-semibold">Tip:</span> Based on the Kakeibo method, aim to save at least 20% of your income each month.
+              💡 <span className="font-semibold">Tip:</span> Based on the
+              Kakeibo method, aim to save at least 20% of your income each
+              month.
             </p>
           </div>
 

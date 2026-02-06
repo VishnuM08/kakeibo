@@ -51,5 +51,5 @@ public class ExpenseController {
 
         return expenseService.getUserExpenses(user);
     }
-    
+
 }

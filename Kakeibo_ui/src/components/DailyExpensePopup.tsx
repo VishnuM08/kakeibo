@@ -1,4 +1,15 @@
-import { X, Coffee, ShoppingBag, Train, Utensils, Sparkles, Gift, Zap, MoreHorizontal } from 'lucide-react';
+import {
+  X,
+  Coffee,
+  ShoppingBag,
+  Train,
+  Utensils,
+  Sparkles,
+  Gift,
+  Zap,
+  MoreHorizontal,
+} from "lucide-react";
+import { UIExpense } from "./AppMain";
 
 interface Expense {
   id: string;
@@ -12,7 +23,7 @@ interface DailyExpensePopupProps {
   isOpen: boolean;
   onClose: () => void;
   date: Date | null;
-  expenses: Expense[];
+  expenses: UIExpense[];
   isDarkMode?: boolean;
 }
 
@@ -31,27 +42,33 @@ const getCategoryIcon = (category: string) => {
 
 const getCategoryColor = (category: string) => {
   const colors: { [key: string]: string } = {
-    food: 'from-[#ff6b6b] to-[#ee5a6f]',
-    transport: 'from-[#4ecdc4] to-[#44a08d]',
-    coffee: 'from-[#f7b731] to-[#fa8231]',
-    shopping: 'from-[#a29bfe] to-[#6c5ce7]',
-    entertainment: 'from-[#fd79a8] to-[#e84393]',
-    utilities: 'from-[#00b894] to-[#00cec9]',
-    other: 'from-[#b2bec3] to-[#636e72]',
+    food: "from-[#ff6b6b] to-[#ee5a6f]",
+    transport: "from-[#4ecdc4] to-[#44a08d]",
+    coffee: "from-[#f7b731] to-[#fa8231]",
+    shopping: "from-[#a29bfe] to-[#6c5ce7]",
+    entertainment: "from-[#fd79a8] to-[#e84393]",
+    utilities: "from-[#00b894] to-[#00cec9]",
+    other: "from-[#b2bec3] to-[#636e72]",
   };
-  return colors[category.toLowerCase()] || 'from-[#b2bec3] to-[#636e72]';
+  return colors[category.toLowerCase()] || "from-[#b2bec3] to-[#636e72]";
 };
 
-export function DailyExpensePopup({ isOpen, onClose, date, expenses, isDarkMode }: DailyExpensePopupProps) {
+export function DailyExpensePopup({
+  isOpen,
+  onClose,
+  date,
+  expenses,
+  isDarkMode,
+}: DailyExpensePopupProps) {
   if (!isOpen || !date) return null;
 
   const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  
-  const formattedDate = date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
+
+  const formattedDate = date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -73,9 +90,7 @@ export function DailyExpensePopup({ isOpen, onClose, date, expenses, isDarkMode 
               <h2 className="text-[24px] font-bold text-black mb-1">
                 Daily Expenses
               </h2>
-              <p className="text-[15px] text-black/50">
-                {formattedDate}
-              </p>
+              <p className="text-[15px] text-black/50">{formattedDate}</p>
             </div>
             <button
               onClick={onClose}
@@ -103,11 +118,14 @@ export function DailyExpensePopup({ isOpen, onClose, date, expenses, isDarkMode 
               {expenses.map((expense, index) => {
                 const Icon = getCategoryIcon(expense.category);
                 const color = getCategoryColor(expense.category);
-                const time = new Date(expense.date).toLocaleTimeString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true,
-                });
+                const time = new Date(expense.date).toLocaleTimeString(
+                  "en-US",
+                  {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  },
+                );
 
                 return (
                   <div
@@ -128,9 +146,7 @@ export function DailyExpensePopup({ isOpen, onClose, date, expenses, isDarkMode 
                           {expense.category}
                         </p>
                         <span className="text-black/20">•</span>
-                        <p className="text-[13px] text-black/40">
-                          {time}
-                        </p>
+                        <p className="text-[13px] text-black/40">{time}</p>
                       </div>
                     </div>
                     <div className="text-right">
