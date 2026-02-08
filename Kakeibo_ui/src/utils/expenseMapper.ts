@@ -10,6 +10,8 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 
+/* ------------------ ICONS ------------------ */
+
 export function getCategoryIcon(category: string) {
   const icons: Record<string, typeof Coffee> = {
     food: Utensils,
@@ -36,41 +38,43 @@ export function getCategoryColor(category: string) {
   return colors[category.toLowerCase()] || "from-[#b2bec3] to-[#636e72]";
 }
 
+/* ------------------ BACKEND → UI ------------------ */
+
 export function mapApiExpenseToUI(exp: BackendExpense): UIExpense {
+  const dateObj = new Date(exp.expenseDateTime);
+
   return {
     id: exp.id,
     description: exp.description,
     category: exp.category,
     amount: exp.amount,
-    date: exp.date,
 
-    icon: getCategoryIcon(exp.category),
-    color: getCategoryColor(exp.category),
-    time: new Date(exp.date).toLocaleTimeString("en-US", {
+    // ✅ SOURCE OF TRUTH
+    dateTime: exp.expenseDateTime,
+
+    // 👇 DISPLAY ONLY
+    date: dateObj.toISOString().split("T")[0],
+    time: dateObj.toLocaleTimeString("en-IN", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
     }),
+
+    icon: getCategoryIcon(exp.category),
+    color: getCategoryColor(exp.category),
+    syncStatus: "synced",
   };
 }
 
-export function mapUIToBackendExpense(
-  ui: UIExpense,
-  userId: string,
-): BackendExpense {
-  const now = new Date().toISOString();
+/* ------------------ UI → BACKEND ------------------ */
 
+export function mapUIToBackendExpense(ui: UIExpense) {
   return {
-    id: ui.id,
     description: ui.description,
     category: ui.category,
     amount: ui.amount,
-    date: ui.date,
-    userId,
 
-    // 🔽 REQUIRED backend fields
-    isRecurring: false,
-    createdAt: now,
-    updatedAt: now,
+    // ✅ ALWAYS send ISO UTC
+    expenseDateTime: ui.dateTime,
   };
 }

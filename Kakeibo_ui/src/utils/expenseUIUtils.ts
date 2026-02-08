@@ -7,8 +7,8 @@ import {
   Zap,
   MoreHorizontal,
 } from "lucide-react";
-import type { Expense as BackendExpense, Expense } from "../services/api";
-import type { UIExpennse } from "../types/UIExpense";
+import type { BackendExpense } from "../types/BackendExpense";
+import type { UIExpense } from "../types/UIExpense";
 
 export const getCategoryIcon = (category: string) => {
   const icons: Record<string, typeof Coffee> = {
@@ -38,49 +38,36 @@ export const getCategoryColor = (category: string) => {
   return colors[category.toLowerCase()] || "from-[#b2bec3] to-[#636e72]";
 };
 
-/*
-export const mapApiExpenseToUI = (expense: BackendExpense): UIExpense => {
-  return {
-    id: expense.id,
-    description: expense.description,
-    category: expense.category,
-    amount: expense.amount,
-    date: expense.date,
+export function mapApiExpenseToUI(api: BackendExpense): UIExpense {
+  const dt = new Date(api.expenseDateTime);
 
-    // UI-only fields
-    icon: getCategoryIcon(expense.category),
-    color: getCategoryColor(expense.category),
-    time: new Date(expense.date).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }),
-  };
-
-  
-};
-*/
-
-// utils/expenseUIUtils.ts
-export function mapApiExpenseToUI(api: Expense): UIExpense {
   return {
     id: api.id,
     description: api.description,
     category: api.category,
     amount: api.amount,
 
-    // 🔑 normalize backend field
-    date: api.expenseDate,
+    dateTime: api.expenseDateTime, // ✅ keep exact backend value
 
-    icon: getCategoryIcon(api.category),
-    color: getCategoryColor(api.category),
-    time: new Date(api.expenseDate).toLocaleTimeString("en-US", {
+    date: dt.toISOString().split("T")[0],
+    time: dt.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
     }),
 
-    notes: api.notes,
-    receiptUrl: api.receiptUrl,
+    icon: getCategoryIcon(api.category),
+    color: getCategoryColor(api.category),
+    syncStatus: "synced",
+  };
+}
+
+// utils/expenseUIUtils.ts
+export function mapUIToBackendExpense(ui: UIExpense): Partial<BackendExpense> {
+  return {
+    description: ui.description,
+    category: ui.category,
+    amount: ui.amount,
+    expenseDateTime: ui.dateTime,
   };
 }

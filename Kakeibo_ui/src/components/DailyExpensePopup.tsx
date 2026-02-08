@@ -9,15 +9,7 @@ import {
   Zap,
   MoreHorizontal,
 } from "lucide-react";
-import { UIExpense } from "./AppMain";
-
-interface Expense {
-  id: string;
-  description: string;
-  category: string;
-  amount: number;
-  date: string;
-}
+import { UIExpense } from "../types/UIExpense";
 
 interface DailyExpensePopupProps {
   isOpen: boolean;
@@ -106,7 +98,7 @@ export function DailyExpensePopup({
               Total Spent
             </p>
             <p className="text-white text-[36px] font-bold tracking-tight">
-              ${total.toFixed(2)}
+              ₹{total.toFixed(2)}
             </p>
           </div>
         </div>
@@ -118,8 +110,8 @@ export function DailyExpensePopup({
               {expenses.map((expense, index) => {
                 const Icon = getCategoryIcon(expense.category);
                 const color = getCategoryColor(expense.category);
-                const time = new Date(expense.date).toLocaleTimeString(
-                  "en-US",
+                const time = new Date(expense.dateTime).toLocaleTimeString(
+                  "en-IN",
                   {
                     hour: "numeric",
                     minute: "2-digit",
@@ -151,7 +143,7 @@ export function DailyExpensePopup({
                     </div>
                     <div className="text-right">
                       <p className="text-[20px] font-bold text-black tabular-nums">
-                        ${expense.amount.toFixed(2)}
+                        ₹{expense.amount.toFixed(2)}
                       </p>
                     </div>
                   </div>

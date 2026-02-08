@@ -29,7 +29,6 @@ import { SearchFilters } from "./SearchFilters";
 import { RecurringExpenseModal } from "./RecurringExpenseModal";
 import { SavingsGoalsView } from "./SavingsGoalsView";
 import { exportToCSV, getCurrentMonthRange } from "../utils/exportUtils";
-import { Expense as APIExpense } from "../services/api";
 import {
   initializeSyncListeners,
   saveExpenseLocally,
@@ -41,13 +40,12 @@ import {
   getSyncStatus,
 } from "../utils/syncUtils";
 
-import { getExpenses } from "../services/api";
+import { deleteExpense, getExpenses, updateExpense } from "../services/api";
 import { createExpense } from "../services/api";
 import { UIExpense } from "../types/UIExpense";
 import { getCategoryIcon, getCategoryColor } from "../utils/expenseUIUtils";
 import { mapApiExpenseToUI } from "../utils/expenseUIUtils";
-import { mapUIToBackendExpense } from "../utils/expenseMapper";
-import { Expense as BackendExpense } from "../services/api";
+import { mapUIToBackendExpense } from "../utils/expenseUIUtils";
 
 /**
  * Main App Component
@@ -183,19 +181,52 @@ export function AppMain({
     description: string;
     category: string;
     amount: number;
-    date: string;
+    expenseDateTime: string;
   }) => {
+    const tempId = `temp-${Date.now()}`;
+
+    const optimisticExpense: UIExpense = {
+      id: tempId,
+      description: newExpense.description,
+      category: newExpense.category,
+      amount: newExpense.amount,
+
+      dateTime: newExpense.expenseDateTime,
+      date: newExpense.expenseDateTime.split("T")[0],
+      time: new Date(newExpense.expenseDateTime).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }),
+
+      icon: getCategoryIcon(newExpense.category),
+      color: getCategoryColor(newExpense.category),
+      syncStatus: "pending",
+    };
+
+    console.log("🟡 Optimistic UI expense:", optimisticExpense);
+
+    setExpenses((prev) => [optimisticExpense, ...prev]);
+
     try {
       const saved = await createExpense({
         description: newExpense.description,
         category: newExpense.category,
         amount: newExpense.amount,
-        expenseDate: newExpense.date,
+        expenseDateTime: newExpense.expenseDateTime,
       });
-      const uiExpense = mapApiExpenseToUI(saved);
-      setExpenses((prev) => [uiExpense, ...prev]);
-    } catch (error) {
-      console.error("Failed to create expense", error);
+
+      console.log("🟢 Backend saved:", saved);
+
+      const savedUI = mapApiExpenseToUI(saved);
+
+      setExpenses((prev) => prev.map((e) => (e.id === tempId ? savedUI : e)));
+    } catch (err) {
+      console.error("🔴 Create expense failed:", err);
+
+      setExpenses((prev) =>
+        prev.map((e) => (e.id === tempId ? { ...e, syncStatus: "failed" } : e)),
+      );
     }
   };
 
@@ -250,24 +281,43 @@ export function AppMain({
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEdit = (updatedUI: UIExpense) => {
+  const handleSaveEdit = async (updatedUI: UIExpense) => {
     setExpenses((prev) =>
-      prev.map((e) => (e.id === updatedUI.id ? updatedUI : e)),
+      prev.map((e) =>
+        e.id === updatedUI.id ? { ...updatedUI, syncStatus: "pending" } : e,
+      ),
     );
 
-    const backendExpense = mapUIToBackendExpense(
-      updatedUI,
-      "TEMP_USER_ID", // later replace with real userId
-    );
+    try {
+      const backendExpense = mapUIToBackendExpense(updatedUI);
+      const saved = await updateExpense(updatedUI.id, backendExpense);
+      const savedUI = mapApiExpenseToUI(saved);
 
-    updateExpenseLocally(backendExpense);
+      setExpenses((prev) =>
+        prev.map((e) => (e.id === savedUI.id ? savedUI : e)),
+      );
+    } catch {
+      setExpenses((prev) =>
+        prev.map((e) =>
+          e.id === updatedUI.id ? { ...e, syncStatus: "failed" } : e,
+        ),
+      );
+    }
+
     setIsEditModalOpen(false);
   };
 
-  const handleDeleteExpense = (expenseId: string) => {
-    const updatedExpenses = expenses.filter((exp) => exp.id !== expenseId);
-    setExpenses(updatedExpenses);
-    deleteExpenseLocally(expenseId);
+  const handleDeleteExpense = async (expenseId: string) => {
+    const snapshot = expenses;
+
+    setExpenses((prev) => prev.filter((e) => e.id !== expenseId));
+
+    try {
+      await deleteExpense(expenseId);
+    } catch {
+      // rollback if backend fails
+      setExpenses(snapshot);
+    }
   };
 
   const handleRecurringExpense = (expense: UIExpense) => {
@@ -391,7 +441,6 @@ export function AppMain({
   useEffect(() => {
     async function load() {
       const apiExpenses = await getExpenses();
-      console.log("API expenses:", apiExpenses);
       const uiExpenses = apiExpenses.map(mapApiExpenseToUI);
       setExpenses(uiExpenses);
     }

@@ -46,22 +46,32 @@ export function CalendarView({
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
+  // const getExpensesForDate = (day: number): UIExpense[] => {
+  //   const date = new Date(year, month, day);
+  //   const dateStr = date.toISOString().split("T")[0];
+
+  //   return expenses.filter((expense) => {
+  //     if (!expense.date) return false;
+
+  //     const expenseDateObj = new Date(expense.date);
+
+  //     // 🔐 critical guard: prevent Invalid time value crash
+  //     if (isNaN(expenseDateObj.getTime())) {
+  //       return false;
+  //     }
+
+  //     const expenseDateStr = expenseDateObj.toISOString().split("T")[0];
+
+  //     return expenseDateStr === dateStr;
+  //   });
+  // };
+
   const getExpensesForDate = (day: number): UIExpense[] => {
     const date = new Date(year, month, day);
     const dateStr = date.toISOString().split("T")[0];
 
     return expenses.filter((expense) => {
-      if (!expense.date) return false;
-
-      const expenseDateObj = new Date(expense.date);
-
-      // 🔐 critical guard: prevent Invalid time value crash
-      if (isNaN(expenseDateObj.getTime())) {
-        return false;
-      }
-
-      const expenseDateStr = expenseDateObj.toISOString().split("T")[0];
-
+      const expenseDateStr = expense.dateTime.split("T")[0];
       return expenseDateStr === dateStr;
     });
   };
@@ -237,7 +247,7 @@ export function CalendarView({
               ₹
               {expenses
                 .filter((exp) => {
-                  const expDate = new Date(exp.date);
+                  const expDate = new Date(exp.dateTime);
                   return (
                     expDate.getMonth() === month &&
                     expDate.getFullYear() === year

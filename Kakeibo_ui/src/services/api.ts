@@ -41,39 +41,8 @@ export interface User {
   createdAt: string;
 }
 
-export interface Expense {
-  id: string;
-  description: string;
-  category: string;
-  amount: number;
-  expenseDate: string;
-  notes?: string; // Optional expense notes
-  receiptUrl?: string; // URL to receipt image stored in backend
-  isRecurring: boolean;
-  recurringFrequency?: "daily" | "weekly" | "monthly" | "yearly";
-  userId: string; // Foreign key to user
-  createdAt: string;
-  updatedAt: string;
-}
-
 import { LucideIcon } from "lucide-react";
-
-export interface UIExpense {
-  id: string;
-  description: string;
-  category: string;
-  amount: number;
-  date: string;
-
-  // UI-only fields
-  icon: LucideIcon;
-  color: string;
-  time: string;
-
-  // optional UI fields
-  notes?: string;
-  receiptUrl?: string;
-}
+import { BackendExpense } from "../types/BackendExpense";
 
 export interface CustomCategory {
   id: string;
@@ -150,6 +119,10 @@ export interface RegisterRequest {
 const API_BASE_URL =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
   "http://localhost:8080/api";
+*/
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
 /**
  * Get JWT token from localStorage
@@ -380,7 +353,7 @@ export async function getExpenses(filters?: {
 }
 
 */
-export async function getExpenses(): Promise<Expense[]> {
+export async function getExpenses(): Promise<BackendExpense[]> {
   const response = await api.get("/expenses");
   return response.data; // ✅ MUST RETURN
 }
@@ -399,9 +372,10 @@ export async function createExpense(expense: {
   description: string;
   category: string;
   amount: number;
-  expenseDate: string;
+  expenseDateTime: string;
 }) {
   const response = await api.post("/expenses", expense);
+  console.log("[API] Create expense response:", response.data);
   return response.data;
 }
 /**
@@ -414,15 +388,10 @@ export async function createExpense(expense: {
  */
 export async function updateExpense(
   id: string,
-  updates: Partial<Expense>,
-): Promise<Expense> {
-  // TODO: Replace with actual API call
-  console.log("[API] Update expense:", id, updates);
-
-  return apiRequest<Expense>(`/expenses/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(updates),
-  });
+  updates: Partial<BackendExpense>,
+): Promise<BackendExpense> {
+  const response = await api.put(`/expenses/${id}`, updates);
+  return response.data;
 }
 
 /**
@@ -433,12 +402,7 @@ export async function updateExpense(
  * RESPONSE: { success: boolean, message: string }
  */
 export async function deleteExpense(id: string): Promise<void> {
-  // TODO: Replace with actual API call
-  console.log("[API] Delete expense:", id);
-
-  return apiRequest<void>(`/expenses/${id}`, {
-    method: "DELETE",
-  });
+  await api.delete(`/expenses/${id}`);
 }
 
 /**

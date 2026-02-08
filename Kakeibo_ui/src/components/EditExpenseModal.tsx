@@ -1,6 +1,6 @@
 import { X, Upload, Image as ImageIcon } from "lucide-react";
 import { useState } from "react";
-import { Expense } from "../services/api";
+//import { Expense } from "../services/api";
 //import { UIExpense } from "../types/expense";
 import { UIExpense } from "../types/UIExpense";
 
@@ -105,14 +105,11 @@ export function EditExpenseModal({
     //   receiptUrl = await uploadReceipt(receiptFile);
     // }
 
-    const updatedExpense: Expense = {
-      ...expense,
+    const updatedExpense: UIExpense = {
+      ...expense, // keeps date + time
       description: description.trim(),
       category,
       amount: numAmount,
-      notes: notes.trim() || undefined,
-      receiptUrl: receiptUrl || undefined,
-      updatedAt: new Date().toISOString(),
     };
 
     // TODO: BACKEND INTEGRATION - Call updateExpense API

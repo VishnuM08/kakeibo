@@ -1,18 +1,21 @@
-import { Coffee } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
 export interface UIExpense {
   id: string;
   description: string;
   category: string;
   amount: number;
-  date: string;
 
-  // UI-only
-  icon: typeof Coffee;
+  dateTime: string; // ✅ SOURCE OF TRUTH (ISO)
+
+  // derived (UI only)
+  date: string; // YYYY-MM-DD
+  time: string; // 10:30 AM
+
+  icon: LucideIcon;
   color: string;
-  time: string;
 
-  // OPTIONAL UI DATA (from backend)
-  notes?: string;
-  receiptUrl?: string;
+  syncStatus?: "synced" | "pending" | "failed";
+  notes?: string; // Optional expense notes
+  receiptUrl?: string; // URL to receipt image stored in backend
 }
