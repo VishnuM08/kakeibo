@@ -5,13 +5,21 @@ import com.kakeibo.backend.dto.LoginResponse;
 import com.kakeibo.backend.dto.UserProfileResponse;
 import com.kakeibo.backend.entity.User;
 import com.kakeibo.backend.repository.UserRepository;
+import com.kakeibo.backend.security.CustomUserDetails;
 import com.kakeibo.backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -33,18 +41,41 @@ public class AuthController {
     }
 
 
-
+    //
+//    @GetMapping("/me")
+//    public UserProfileResponse me(
+//            @AuthenticationPrincipal UserDetails userDetails
+//    ) {
+//        User user = userRepository
+//                .findByEmail(userDetails.getUsername())
+//                .orElseThrow();
+//
+//        return new UserProfileResponse(
+//                user.getId().toString(),
+//                user.getEmail(),
+//                user.getName()
+//        );
+//    }
     @GetMapping("/me")
-    public UserProfileResponse me(
-            @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        User user = userRepository
-                .findByEmail(userDetails.getUsername())
-                .orElseThrow();
+    public UserProfileResponse me(Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+
+        String email = authentication.getName(); // comes from JWT subject
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found")
+                );
 
         return new UserProfileResponse(
                 user.getId().toString(),
                 user.getEmail(),
                 user.getName()
         );
-    }}
+    }
+
+
+}

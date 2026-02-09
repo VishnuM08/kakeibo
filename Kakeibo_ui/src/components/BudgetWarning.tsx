@@ -1,4 +1,11 @@
-import { AlertTriangle, TrendingUp } from 'lucide-react';
+import { AlertTriangle, TrendingUp } from "lucide-react";
+
+const formatINR = (value: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(value);
 
 interface BudgetWarningProps {
   monthlyBudget: number;
@@ -7,14 +14,23 @@ interface BudgetWarningProps {
   isDarkMode?: boolean;
 }
 
-export function BudgetWarning({ monthlyBudget, currentSpending, onSetBudget, isDarkMode }: BudgetWarningProps) {
+export function BudgetWarning({
+  monthlyBudget,
+  currentSpending,
+  onSetBudget,
+  isDarkMode,
+}: BudgetWarningProps) {
   const percentage = (currentSpending / monthlyBudget) * 100;
   const isOverBudget = percentage >= 100;
   const isWarning = percentage >= 80 && percentage < 100;
 
   // Calculate daily average and remaining days
   const today = new Date();
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const daysInMonth = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0,
+  ).getDate();
   const currentDay = today.getDate();
   const daysRemaining = daysInMonth - currentDay + 1;
   const dailyAverage = currentSpending / currentDay;
@@ -61,7 +77,10 @@ export function BudgetWarning({ monthlyBudget, currentSpending, onSetBudget, isD
               Budget Exceeded
             </h3>
             <p className="text-[15px] text-white/90 mb-2 leading-snug">
-              You've spent <span className="font-bold">${currentSpending.toFixed(2)}</span> of your ${monthlyBudget.toFixed(2)} monthly budget ({percentage.toFixed(0)}%).
+              You've spent{" "}
+              <span className="font-bold">₹{currentSpending.toFixed(2)}</span>{" "}
+              of your ₹{monthlyBudget.toFixed(2)} monthly budget (
+              {percentage.toFixed(0)}%).
             </p>
             <p className="text-[13px] text-white/80">
               Consider reviewing your spending habits.
@@ -85,7 +104,8 @@ export function BudgetWarning({ monthlyBudget, currentSpending, onSetBudget, isD
               Approaching Budget Limit
             </h3>
             <p className="text-[15px] text-white/90 mb-2 leading-snug">
-              You've used {percentage.toFixed(0)}% of your monthly budget. ${(monthlyBudget - currentSpending).toFixed(2)} remaining.
+              You've used {percentage.toFixed(0)}% of your monthly budget. Only
+              ₹{(monthlyBudget - currentSpending).toFixed(2)} remaining.
             </p>
             <p className="text-[13px] text-white/80">
               {daysRemaining} days left in this month.
@@ -109,10 +129,13 @@ export function BudgetWarning({ monthlyBudget, currentSpending, onSetBudget, isD
               On Track to Exceed Budget
             </h3>
             <p className="text-[15px] text-white/90 mb-2 leading-snug">
-              Your daily average is <span className="font-bold">${dailyAverage.toFixed(2)}</span>. At this rate, you'll spend ${projectedSpending.toFixed(2)} this month.
+              Your daily average is{" "}
+              <span className="font-bold">{formatINR(dailyAverage)}</span>. At
+              this rate, you'll spend {formatINR(projectedSpending)} this month.
             </p>
             <p className="text-[13px] text-white/80">
-              Suggested daily limit: ${((monthlyBudget - currentSpending) / daysRemaining).toFixed(2)}
+              Suggested daily limit:{" "}
+              {formatINR((monthlyBudget - currentSpending) / daysRemaining)}
             </p>
           </div>
         </div>
@@ -122,17 +145,23 @@ export function BudgetWarning({ monthlyBudget, currentSpending, onSetBudget, isD
 
   // If on track (show progress)
   return (
-    <div className={`backdrop-blur-xl rounded-[20px] p-5 mb-5 shadow-sm border ${
-      isDarkMode 
-        ? 'bg-[#1c1c1e]/90 border-white/10' 
-        : 'bg-white/80 border-black/5'
-    }`}>
+    <div
+      className={`backdrop-blur-xl rounded-[20px] p-5 mb-5 shadow-sm border ${
+        isDarkMode
+          ? "bg-[#1c1c1e]/90 border-white/10"
+          : "bg-white/80 border-black/5"
+      }`}
+    >
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className={`text-[17px] font-bold mb-1 ${isDarkMode ? 'text-white' : 'text-black'}`}>
+          <h3
+            className={`text-[17px] font-bold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}
+          >
             Budget Status
           </h3>
-          <p className={`text-[13px] ${isDarkMode ? 'text-white/50' : 'text-black/50'}`}>
+          <p
+            className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+          >
             ₹{currentSpending.toFixed(2)} of ₹{monthlyBudget.toFixed(2)}
           </p>
         </div>
@@ -142,17 +171,22 @@ export function BudgetWarning({ monthlyBudget, currentSpending, onSetBudget, isD
           </p>
         </div>
       </div>
-      
+
       {/* Progress Bar */}
-      <div className={`w-full h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-white/10' : 'bg-black/5'}`}>
+      <div
+        className={`w-full h-2 rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/5"}`}
+      >
         <div
           className="h-full bg-gradient-to-r from-[#34c759] to-[#30d158] rounded-full transition-all duration-500"
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>
-      
-      <p className={`text-[13px] mt-3 ${isDarkMode ? 'text-white/50' : 'text-black/50'}`}>
-        Daily average: ₹{dailyAverage.toFixed(2)} • {daysRemaining} days remaining
+
+      <p
+        className={`text-[13px] mt-3 ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+      >
+        Daily average: ₹{dailyAverage.toFixed(2)} • {daysRemaining} days
+        remaining
       </p>
     </div>
   );

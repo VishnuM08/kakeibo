@@ -2,6 +2,7 @@ package com.kakeibo.backend.controller;
 
 import com.kakeibo.backend.dto.CreateExpenseRequest;
 import com.kakeibo.backend.dto.UpdateExpenseRequest;
+import com.kakeibo.backend.entity.Expense;
 import com.kakeibo.backend.entity.User;
 import com.kakeibo.backend.repository.UserRepository;
 import com.kakeibo.backend.security.CustomUserDetails;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
@@ -24,17 +26,15 @@ public class ExpenseController {
     private final UserRepository userRepository;
 
     @PostMapping
-    public Object createExpense(
+    public Expense createExpense(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody CreateExpenseRequest request
+            @RequestBody @Valid CreateExpenseRequest request
     ) {
         if (userDetails == null) {
-            throw new RuntimeException("Unauthenticated");
+            throw new IllegalStateException("Authenticated user is null");
         }
 
-        User user = userRepository
-                .findByEmail(userDetails.getUsername())
-                .orElseThrow();
+        User user = userDetails.getUser(); // ✅ map to entity
 
         return expenseService.createExpense(
                 user,
@@ -44,6 +44,7 @@ public class ExpenseController {
                 request.getExpenseDateTime()
         );
     }
+
 
     @GetMapping
     public Object getMyExpenses(
@@ -88,11 +89,12 @@ public class ExpenseController {
                 .findByEmail(userDetails.getUsername())
                 .orElseThrow();
 
-        return expenseService.updateExpense( id,
+        return expenseService.updateExpense(id,
                 user,
                 request.getAmount(),
                 request.getDescription(),
                 request.getCategory()
         );
     }
+
 }

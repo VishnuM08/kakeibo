@@ -44,6 +44,17 @@ export interface User {
 import { LucideIcon } from "lucide-react";
 import { BackendExpense } from "../types/BackendExpense";
 
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("jwt_token");
+      window.location.href = "/login";
+    }
+    return Promise.reject(err);
+  },
+);
+
 export interface CustomCategory {
   id: string;
   userId: string;

@@ -43,17 +43,21 @@ export function getCategoryColor(category: string) {
 export function mapApiExpenseToUI(exp: BackendExpense): UIExpense {
   const dateObj = new Date(exp.expenseDateTime);
 
+  const localDate = `${dateObj.getFullYear()}-${String(
+    dateObj.getMonth() + 1,
+  ).padStart(2, "0")}-${String(dateObj.getDate()).padStart(2, "0")}`;
+
   return {
     id: exp.id,
     description: exp.description,
     category: exp.category,
     amount: exp.amount,
 
-    // ✅ SOURCE OF TRUTH
+    // ✅ SOURCE OF TRUTH (UTC)
     dateTime: exp.expenseDateTime,
 
-    // 👇 DISPLAY ONLY
-    date: dateObj.toISOString().split("T")[0],
+    // ✅ DISPLAY (LOCAL TIME)
+    date: localDate,
     time: dateObj.toLocaleTimeString("en-IN", {
       hour: "numeric",
       minute: "2-digit",

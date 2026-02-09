@@ -32,10 +32,24 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        //.requestMatchers("/auth/login", "/test/**").permitAll()
-                        .requestMatchers("/auth/login","/auth/register","/expenses/**", "/auth/me", "/test/**").permitAll()
+
+                        // ✅ PUBLIC
+                        .requestMatchers(
+                                "/auth/login",
+                                "/auth/register",
+                                "/test/**"
+                        ).permitAll()
+
+                        // 🔐 PROTECTED
+                        .requestMatchers(
+                                "/auth/me",
+                                "/expenses/**",
+                                "/budget/**"
+                        ).authenticated()
+
                         .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class

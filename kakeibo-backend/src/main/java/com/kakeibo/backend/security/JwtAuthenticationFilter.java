@@ -25,19 +25,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        System.out.println("JWT FILTER HIT → " + request.getMethod() + " " + request.getServletPath());
 
         String path = request.getServletPath();
+        System.out.println("JWT FILTER → " + request.getMethod() + " " + path);
 
-        // Public endpoints
-        if (path.startsWith("/auth") || path.startsWith("/test")) {
+        // ✅ Only truly public endpoints
+        if (
+                path.equals("/auth/login") ||
+                        path.equals("/auth/register") ||
+                        path.startsWith("/test")
+        ) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String authHeader = request.getHeader("Authorization");
-
-        //String authHeader = request.getHeader("Authorization");
         System.out.println("Authorization header = " + authHeader);
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -46,17 +48,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
+
+        if (!jwtUtil.isTokenValid(token)) {
+            SecurityContextHolder.clearContext();
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String email = jwtUtil.extractEmail(token);
+        if (email == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        var userDetails = userDetailsService.loadUserByUsername(email);
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            var userDetails = userDetailsService.loadUserByUsername(email);
 
-        var authentication = new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null,
-                userDetails.getAuthorities()
-        );
+            var authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails,
+                    null,
+                    userDetails.getAuthorities()
+            );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
 
         filterChain.doFilter(request, response);
     }

@@ -66,13 +66,27 @@ export function CalendarView({
   //   });
   // };
 
-  const getExpensesForDate = (day: number): UIExpense[] => {
-    const date = new Date(year, month, day);
-    const dateStr = date.toISOString().split("T")[0];
+  // const getExpensesForDate = (day: number): UIExpense[] => {
+  //   const date = new Date(year, month, day);
+  //   const dateStr = date.toISOString().split("T")[0];
 
+  //   return expenses.filter((expense) => {
+  //     const expenseDateStr = expense.dateTime.split("T")[0];
+  //     return expenseDateStr === dateStr;
+  //   });
+  // };
+
+  const getExpensesForDate = (day: number): UIExpense[] => {
     return expenses.filter((expense) => {
-      const expenseDateStr = expense.dateTime.split("T")[0];
-      return expenseDateStr === dateStr;
+      if (!expense.date) return false;
+
+      const expenseDate = new Date(expense.date + "T00:00:00");
+
+      return (
+        expenseDate.getDate() === day &&
+        expenseDate.getMonth() === month &&
+        expenseDate.getFullYear() === year
+      );
     });
   };
 

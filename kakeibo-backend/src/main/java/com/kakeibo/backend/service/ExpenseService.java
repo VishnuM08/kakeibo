@@ -3,6 +3,7 @@ package com.kakeibo.backend.service;
 import com.kakeibo.backend.entity.Expense;
 import com.kakeibo.backend.entity.User;
 import com.kakeibo.backend.repository.ExpenseRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +18,25 @@ import java.util.UUID;
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
+    private final BudgetService budgetService;
 
+    //    public Expense createExpense(
+//            User user,
+//            Double amount,
+//            String description,
+//            String category,
+//            Instant expenseDateTime
+//    ) {
+//        Expense expense = new Expense();
+//        expense.setUser(user);
+//        expense.setAmount(amount);
+//        expense.setDescription(description);
+//        expense.setCategory(category);
+//        expense.setExpenseDateTime(expenseDateTime !=null ? expenseDateTime : Instant.now());
+//
+//        return expenseRepository.save(expense);
+//    }
+    @Transactional
     public Expense createExpense(
             User user,
             Double amount,
@@ -25,15 +44,28 @@ public class ExpenseService {
             String category,
             Instant expenseDateTime
     ) {
+        if (user == null) {
+            throw new IllegalStateException("Authenticated user is null");
+        }
+
         Expense expense = new Expense();
-        expense.setUser(user);
+        expense.setUser(user); // 🔥 THIS WAS MISSING OR BROKEN
         expense.setAmount(amount);
         expense.setDescription(description);
         expense.setCategory(category);
-        expense.setExpenseDateTime(expenseDateTime !=null ? expenseDateTime : Instant.now());
+        expense.setExpenseDateTime(
+                expenseDateTime != null ? expenseDateTime : Instant.now()
+        );
 
-        return expenseRepository.save(expense);
+        Expense savedExpense = expenseRepository.save(expense);
+
+        // Reduce budget
+        budgetService.reduceBudget(user, amount);
+
+        return savedExpense;
     }
+
+
 
     public List<Expense> getUserExpenses(User user) {
         return expenseRepository.findByUser(user);
@@ -51,7 +83,7 @@ public class ExpenseService {
         expenseRepository.delete(expense);
     }
 
-    public Expense updateExpense(UUID expenseId, User user , Double amount,
+    public Expense updateExpense(UUID expenseId, User user, Double amount,
                                  String description,
                                  String category) {
         Expense expense = expenseRepository
