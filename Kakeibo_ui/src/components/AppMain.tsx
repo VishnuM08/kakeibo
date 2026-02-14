@@ -1,104 +1,44 @@
 import {
-  Plus,
-  Calendar,
-  Coffee,
-  ShoppingBag,
-  Train,
-  Utensils,
   BarChart3,
-  Settings,
-  Film,
-  Zap,
-  MoreHorizontal,
-  Moon,
-  Sun,
-  Repeat,
-  Target,
+  Calendar,
   Download,
+  Moon,
+  Plus,
+  Repeat,
   Search,
+  Settings,
+  Sun,
+  Target,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { exportToCSV, getCurrentMonthRange } from "../utils/exportUtils";
 import { AddExpenseModal } from "./AddExpenseModal";
-import { CalendarView } from "./CalendarView";
-import { DailyExpensePopup } from "./DailyExpensePopup";
+import { AnalyticsView } from "./AnalyticsView";
 import { BudgetSettingsModal } from "./BudgetSettingsModal";
 import { BudgetWarning } from "./BudgetWarning";
-import { AnalyticsView } from "./AnalyticsView";
+import { CalendarView } from "./CalendarView";
+import { DailyExpensePopup } from "./DailyExpensePopup";
 import { EditExpenseModal } from "./EditExpenseModal";
-import { SearchFilters } from "./SearchFilters";
 import { RecurringExpenseModal } from "./RecurringExpenseModal";
 import { SavingsGoalsView } from "./SavingsGoalsView";
-import { exportToCSV, getCurrentMonthRange } from "../utils/exportUtils";
+import { SearchFilters } from "./SearchFilters";
+
 import {
-  initializeSyncListeners,
-  saveExpenseLocally,
-  updateExpenseLocally,
-  deleteExpenseLocally,
-  getExpensesLocally,
-  saveBudgetLocally,
-  getBudgetLocally,
-  getSyncStatus,
-} from "../utils/syncUtils";
-
-import { deleteExpense, getExpenses, updateExpense } from "../services/api";
-import { createExpense } from "../services/api";
+  createExpense,
+  deleteExpense,
+  getCurrentBudget,
+  getExpenses,
+  setMonthlyBudget,
+  updateExpense,
+} from "../services/api";
+import { Budget } from "../types/Budget";
 import { UIExpense } from "../types/UIExpense";
-import { getCategoryIcon, getCategoryColor } from "../utils/expenseUIUtils";
-import { mapApiExpenseToUI } from "../utils/expenseUIUtils";
-import { mapUIToBackendExpense } from "../utils/expenseUIUtils";
-
-/**
- * Main App Component
- *
- * BACKEND INTEGRATION NOTES:
- * - On app load, check for JWT token and fetch user data
- * - If no token, show login screen
- * - Fetch all expenses, budgets, savings goals from backend APIs
- * - Implement localStorage as cache, sync with backend
- * - Handle offline mode with service workers
- *
- * OFFLINE-FIRST ARCHITECTURE:
- * - All operations happen on localStorage first (instant UI)
- * - Changes queued for backend sync
- * - Auto-sync when connection restored
- * - User sees instant feedback, no loading states
- */
-
-// Mock data for today's expenses
-/*
-const initialExpenses: Expense[] = [
-  {
-    id: "1",
-    category: "food",
-    amount: 12.5,
-    description: "Lunch at cafe",
-    time: "12:30 PM",
-    icon: Utensils,
-    color: "from-[#ff6b6b] to-[#ee5a6f]",
-    date: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    category: "transport",
-    amount: 5.0,
-    description: "Subway fare",
-    time: "9:15 AM",
-    icon: Train,
-    color: "from-[#4ecdc4] to-[#44a08d]",
-    date: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    category: "coffee",
-    amount: 4.8,
-    description: "Morning coffee",
-    time: "8:45 AM",
-    icon: Coffee,
-    color: "from-[#f7b731] to-[#fa8231]",
-    date: new Date().toISOString(),
-  },
-];
-*/
+import {
+  getCategoryColor,
+  getCategoryIcon,
+  mapApiExpenseToUI,
+  mapUIToBackendExpense,
+} from "../utils/expenseUIUtils";
 
 export function AppMain({
   isDarkMode = false,
@@ -122,7 +62,7 @@ export function AppMain({
   const [isDailyPopupOpen, setIsDailyPopupOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   //const [selectedDayExpenses, setSelectedDayExpenses] = useState<Expense[]>([]);
-  const [monthlyBudget, setMonthlyBudget] = useState<number | null>(null);
+  //const [monthlyBudget, setMonthlyBudget] = useState<number | null>(null);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -139,15 +79,37 @@ export function AppMain({
     year: "numeric",
   });
 
-  // Get today's expenses
+  const [budget, setBudget] = useState<Budget | null>(null);
+  const [budgetLoading, setBudgetLoading] = useState(true);
 
-  /*
-  const todayStr = new Date().toISOString().split("T")[0];
-  const todaysExpenses = expenses.filter((exp) => {
-    const expDate = new Date(exp.date).toISOString().split("T")[0];
-    return expDate === todayStr;
-  });
-*/
+  const handleSetBudget = async (amount: number) => {
+    try {
+      const updated = await setMonthlyBudget(amount);
+      setBudget(updated); // 🔥 refresh UI instantly
+      setIsBudgetModalOpen(false);
+    } catch (e) {
+      console.error("Failed to set budget", e);
+    }
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const current = await getCurrentBudget();
+        setBudget(current);
+      } catch (e) {
+        console.error("Failed to load budget", e);
+      } finally {
+        setBudgetLoading(false);
+      }
+    })();
+  }, []);
+
+  const refreshBudget = async () => {
+    const updated = await getCurrentBudget();
+    setBudget(updated);
+  };
+
   const todayStr = new Date().toISOString().split("T")[0];
 
   const todaysExpenses = expenses.filter((exp) => {
@@ -215,7 +177,7 @@ export function AppMain({
         amount: newExpense.amount,
         expenseDateTime: newExpense.expenseDateTime,
       });
-
+      await refreshBudget();
       console.log("🟢 Backend saved:", saved);
 
       const savedUI = mapApiExpenseToUI(saved);
@@ -230,45 +192,15 @@ export function AppMain({
     }
   };
 
-  /*
-      const mappedExpense: Expense = {
-        ...saved,
-        icon: getCategoryIcon(saved.category),
-        color: getCategoryColor(saved.category),
-        time: new Date(saved.expenseDate).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        }),
-        date: saved.expenseDate,
-      };
-
-      setExpenses((prev) => [mappedExpense, ...prev]);
-      saveExpenseLocally(mappedExpense);
-    } catch (error) {
-      console.warn("Backend failed, saving locally");
-
-      const fallbackExpense: Expense = {
-        id: Date.now().toString(),
-        description: newExpense.description,
-        category: newExpense.category,
-        amount: newExpense.amount,
-        date: newExpense.date,
-        icon: getCategoryIcon(newExpense.category),
-        color: getCategoryColor(newExpense.category),
-        time: new Date().toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        }),
-      };
-
-      setExpenses((prev) => [fallbackExpense, ...prev]);
-      saveExpenseLocally(fallbackExpense);
+  
+  const handleSaveBudget = async (amount: number) => {
+    try {
+      const saved = await setMonthlyBudget(amount);
+      setBudget(saved); // 🔥 refresh UI immediately
+    } catch (e) {
+      console.error("Failed to save budget", e);
     }
   };
-
-  */
 
   const handleDateClick = (date: Date, dayExpenses: UIExpense[]) => {
     setSelectedDate(date);
@@ -291,6 +223,7 @@ export function AppMain({
     try {
       const backendExpense = mapUIToBackendExpense(updatedUI);
       const saved = await updateExpense(updatedUI.id, backendExpense);
+      await refreshBudget();
       const savedUI = mapApiExpenseToUI(saved);
 
       setExpenses((prev) =>
@@ -314,6 +247,7 @@ export function AppMain({
 
     try {
       await deleteExpense(expenseId);
+      await refreshBudget();
     } catch {
       // rollback if backend fails
       setExpenses(snapshot);
@@ -355,88 +289,6 @@ export function AppMain({
     exportToCSV(filteredExpenses, "expenses.csv");
   };
 
-  /*
-  useEffect(() => {
-    // Initialize sync listeners
-    initializeSyncListeners(() => {
-      // Reload expenses when sync completes
-      const syncedExpenses = getExpensesLocally();
-      // Map expenses to include icon and color based on category
-      const mappedExpenses = syncedExpenses.map((exp) => ({
-        ...exp,
-        icon: getCategoryIcon(exp.category),
-        color: getCategoryColor(exp.category),
-        time: new Date(exp.date).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        }),
-      }));
-      setExpenses(mappedExpenses);
-    });
-
-    // Load initial expenses from localStorage
-    const storedExpenses = getExpensesLocally();
-    if (storedExpenses.length > 0) {
-      // Map expenses to include icon and color based on category
-      const mappedExpenses = storedExpenses.map((exp) => ({
-        ...exp,
-        icon: getCategoryIcon(exp.category),
-        color: getCategoryColor(exp.category),
-        time: new Date(exp.date).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        }),
-      }));
-      setExpenses(mappedExpenses);
-    } else {
-      // Use initial mock data
-      setExpenses(initialExpenses);
-      // Save to localStorage
-      initialExpenses.forEach((exp) => saveExpenseLocally(exp));
-    }
-
-  
-
-
-// Load budget from localStorage
-    const storedBudget = getBudgetLocally();
-    if (storedBudget !== null) {
-      setMonthlyBudget(storedBudget);
-    }
-  }, []);
-*/
-  /*
-  useEffect(() => {
-    async function loadFromBackend() {
-      try {
-        const apiExpenses = await getExpenses();
-
-        const mapped = apiExpenses.map((exp) => ({
-          ...exp,
-          icon: getCategoryIcon(exp.category),
-          color: getCategoryColor(exp.category),
-          time: new Date(exp.date).toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          }),
-        }));
-
-        setExpenses(mapped);
-
-        // cache locally
-        mapped.forEach(saveExpenseLocally);
-      } catch (e) {
-        console.warn("Backend unavailable, using local cache");
-      }
-    }
-
-    loadFromBackend();
-  }, []);
-
-*/
 
   useEffect(() => {
     async function load() {
@@ -511,6 +363,29 @@ export function AppMain({
               </button>
             </div>
           </div>
+          {budgetLoading ? (
+            <div className="text-sm text-gray-500">Loading budget...</div>
+          ) : budget ? (
+            <div className="mb-4 rounded-xl p-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+              <div className="text-sm opacity-80">Monthly Budget</div>
+              <div className="text-2xl font-bold">₹{budget.monthlyAmount}</div>
+
+              <div className="mt-2 text-sm opacity-80">Remaining</div>
+              <div
+                className={`text-xl font-semibold ${
+                  budget.remainingAmount < 0 ? "text-red-300" : ""
+                }`}
+              >
+                ₹{budget.remainingAmount}
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4 rounded-xl p-4 border border-dashed">
+              <p className="text-sm text-gray-500">
+                No budget set for this month
+              </p>
+            </div>
+          )}
 
           <div className="bg-gradient-to-br from-[#007aff] to-[#0051d5] rounded-[20px] p-6 shadow-lg">
             <p className="text-white/80 text-[13px] font-semibold mb-1 uppercase tracking-wider">
@@ -527,8 +402,7 @@ export function AppMain({
 
         {/* Budget Warning */}
         <BudgetWarning
-          monthlyBudget={monthlyBudget ?? 0}
-          currentSpending={monthTotal}
+          budget={budget}
           onSetBudget={() => setIsBudgetModalOpen(true)}
           isDarkMode={isDarkMode}
         />
@@ -733,8 +607,8 @@ export function AppMain({
         <BudgetSettingsModal
           isOpen={isBudgetModalOpen}
           onClose={() => setIsBudgetModalOpen(false)}
-          currentBudget={monthlyBudget}
-          onSaveBudget={setMonthlyBudget}
+          currentBudget={budget?.monthlyAmount ?? null}
+          onSaveBudget={handleSaveBudget}
           isDarkMode={isDarkMode}
         />
       )}

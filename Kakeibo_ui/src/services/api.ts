@@ -41,8 +41,28 @@ export interface User {
   createdAt: string;
 }
 
-import { LucideIcon } from "lucide-react";
 import { BackendExpense } from "../types/BackendExpense";
+import { Budget } from "../types/Budget";
+
+// ==================== BUDGET APIs ====================
+
+/**
+ * GET /budget/current
+ * Get current month budget
+ */
+export async function getCurrentBudget(): Promise<Budget | null> {
+  const res = await api.get("/budget/current");
+  return res.data;
+}
+
+/**
+ * POST /budget
+ * Set or update monthly budget (current month)
+ */
+export async function setMonthlyBudget(amount: number): Promise<Budget> {
+  const res = await api.post("/budget", { amount });
+  return res.data;
+}
 
 api.interceptors.response.use(
   (res) => res,
@@ -65,15 +85,6 @@ export interface CustomCategory {
   gradientFrom: string;
   gradientTo: string;
   createdAt: string;
-}
-
-export interface Budget {
-  id: string;
-  userId: string;
-  monthlyAmount: number;
-  month: string; // Format: "YYYY-MM"
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface SavingsGoal {
@@ -529,25 +540,9 @@ export async function deleteRecurringExpense(id: string): Promise<void> {
  * BACKEND ENDPOINT: GET /api/budgets/current
  * RESPONSE: Budget | null
  */
-export async function getCurrentBudget(): Promise<Budget | null> {
-  // TODO: Replace with actual API call
-  console.log("[API] Get current budget");
 
-  const stored = localStorage.getItem("kakeibo_monthly_budget");
-  if (!stored) return null;
-
-  return {
-    id: "budget-1",
-    userId: "user-1",
-    monthlyAmount: parseFloat(stored),
-    month: new Date().toISOString().slice(0, 7),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  // Actual implementation:
-  // return apiRequest<Budget>('/budgets/current');
-}
+// Actual implementation:
+// return apiRequest<Budget>('/budgets/current');
 
 /**
  * POST /budgets
@@ -557,18 +552,6 @@ export async function getCurrentBudget(): Promise<Budget | null> {
  * REQUEST BODY: { monthlyAmount: number, month: string }
  * RESPONSE: Budget
  */
-export async function setBudget(
-  amount: number,
-  month: string,
-): Promise<Budget> {
-  // TODO: Replace with actual API call
-  console.log("[API] Set budget:", amount, month);
-
-  return apiRequest<Budget>("/budgets", {
-    method: "POST",
-    body: JSON.stringify({ monthlyAmount: amount, month }),
-  });
-}
 
 // ==================== SAVINGS GOAL APIs ====================
 
@@ -843,4 +826,4 @@ export async function verifyUserPin(pin: string): Promise<boolean> {
 }
 
 // Export utility functions
-export { getAuthToken, setAuthToken, removeAuthToken };
+export { getAuthToken, removeAuthToken, setAuthToken };

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +16,9 @@ public class BudgetService {
 
     private final BudgetRepository budgetRepository;
 
+    // ===============================
+    // SET / UPDATE MONTHLY BUDGET
+    // ===============================
     @Transactional
     public Budget setMonthlyBudget(User user, double amount) {
 
@@ -24,29 +26,29 @@ public class BudgetService {
         int year = now.getYear();
         int month = now.getMonthValue();
 
-        Optional<Budget> existing =
-                budgetRepository.findByUserAndYearAndMonth(user, year, month);
-
-        if (existing.isPresent()) {
-            Budget budget = existing.get();
-            budget.setMonthlyAmount(amount);
-            budget.setRemainingAmount(amount);
-            return budgetRepository.save(budget);
-        }
-
-        Budget budget = new Budget();
-        budget.setUser(user);
-        budget.setYear(year);
-        budget.setMonth(month);
-        budget.setMonthlyAmount(amount);
-        budget.setRemainingAmount(amount);
-
-        return budgetRepository.save(budget);
+        return budgetRepository
+                .findByUserAndYearAndMonth(user, year, month)
+                .map(budget -> {
+                    budget.setMonthlyAmount(amount);
+                    budget.setRemainingAmount(amount);
+                    return budget;
+                })
+                .orElseGet(() -> {
+                    Budget budget = new Budget();
+                    budget.setUser(user);
+                    budget.setYear(year);
+                    budget.setMonth(month);
+                    budget.setMonthlyAmount(amount);
+                    budget.setRemainingAmount(amount);
+                    return budgetRepository.save(budget);
+                });
     }
 
+    // ===============================
+    // GET CURRENT MONTH BUDGET
+    // ===============================
     public Budget getCurrentBudget(User user) {
-
-        LocalDate now = LocalDate.now();
+        YearMonth now = YearMonth.now();
 
         return budgetRepository
                 .findByUserAndYearAndMonth(
@@ -57,10 +59,12 @@ public class BudgetService {
                 .orElse(null);
     }
 
+    // ===============================
+    // REDUCE BUDGET (on expense add)
+    // ===============================
     @Transactional
     public void reduceBudget(User user, double expenseAmount) {
-
-        LocalDate now = LocalDate.now();
+        YearMonth now = YearMonth.now();
 
         budgetRepository
                 .findByUserAndYearAndMonth(
@@ -68,10 +72,51 @@ public class BudgetService {
                         now.getYear(),
                         now.getMonthValue()
                 )
-                .ifPresent(budget -> {
-                    budget.setRemainingAmount(
-                            budget.getRemainingAmount() - expenseAmount
-                    );
-                });
+                .ifPresent(budget ->
+                        budget.setRemainingAmount(
+                                budget.getRemainingAmount() - expenseAmount
+                        )
+                );
+    }
+
+    // ===============================
+    // RESTORE BUDGET (on delete)
+    // ===============================
+    @Transactional
+    public void restoreBudget(User user, double amount) {
+        YearMonth now = YearMonth.now();
+
+        budgetRepository
+                .findByUserAndYearAndMonth(
+                        user,
+                        now.getYear(),
+                        now.getMonthValue()
+                )
+                .ifPresent(budget ->
+                        budget.setRemainingAmount(
+                                budget.getRemainingAmount() + amount
+                        )
+                );
+    }
+
+    // ===============================
+    // ADJUST BUDGET (on update)
+    // delta can be + or -
+    // ===============================
+    @Transactional
+    public void adjustBudget(User user, double delta) {
+        YearMonth now = YearMonth.now();
+
+        budgetRepository
+                .findByUserAndYearAndMonth(
+                        user,
+                        now.getYear(),
+                        now.getMonthValue()
+                )
+                .ifPresent(budget ->
+                        budget.setRemainingAmount(
+                                budget.getRemainingAmount() + delta
+                        )
+                );
     }
 }

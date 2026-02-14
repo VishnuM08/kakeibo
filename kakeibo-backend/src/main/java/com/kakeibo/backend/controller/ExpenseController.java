@@ -1,10 +1,8 @@
 package com.kakeibo.backend.controller;
 
 import com.kakeibo.backend.dto.CreateExpenseRequest;
+import com.kakeibo.backend.dto.ExpenseResponse;
 import com.kakeibo.backend.dto.UpdateExpenseRequest;
-import com.kakeibo.backend.entity.Expense;
-import com.kakeibo.backend.entity.User;
-import com.kakeibo.backend.repository.UserRepository;
 import com.kakeibo.backend.security.CustomUserDetails;
 import com.kakeibo.backend.service.ExpenseService;
 import jakarta.validation.Valid;
@@ -13,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -23,78 +21,48 @@ public class ExpenseController {
 
     private final ExpenseService expenseService;
 
-    private final UserRepository userRepository;
-
+    // ===============================
+    // CREATE
+    // ===============================
     @PostMapping
-    public Expense createExpense(
+    public ExpenseResponse createExpense(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid CreateExpenseRequest request
     ) {
-        if (userDetails == null) {
-            throw new IllegalStateException("Authenticated user is null");
-        }
-
-        User user = userDetails.getUser(); // ✅ map to entity
-
-        return expenseService.createExpense(
-                user,
-                request.getAmount(),
-                request.getDescription(),
-                request.getCategory(),
-                request.getExpenseDateTime()
-        );
+        return expenseService.createExpense(request, userDetails);
     }
 
-
+    // ===============================
+    // READ
+    // ===============================
     @GetMapping
-    public Object getMyExpenses(
+    public List<ExpenseResponse> getUserExpenses(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        User user = userRepository
-                .findByEmail(userDetails.getUsername())
-                .orElseThrow();
-
-        return expenseService.getUserExpenses(user);
+        return expenseService.getUserExpenses(userDetails);
     }
 
+    // ===============================
+    // UPDATE
+    // ===============================
+    @PutMapping("/{id}")
+    public ExpenseResponse updateExpense(
+            @PathVariable UUID id,
+            @RequestBody @Valid UpdateExpenseRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return expenseService.updateExpense(id, request, userDetails);
+    }
+
+    // ===============================
+    // DELETE
+    // ===============================
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> removeExpense(
+    public ResponseEntity<Void> deleteExpense(
             @PathVariable UUID id,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        if (userDetails == null) {
-            return ResponseEntity.status(401).build();
-        }
-
-        User user = userRepository
-                .findByEmail(userDetails.getUsername())
-                .orElseThrow();
-
-        expenseService.deleteExpense(id, user);
-
+        expenseService.deleteExpense(id, userDetails);
         return ResponseEntity.noContent().build();
     }
-
-    @PutMapping("/{id}")
-    public Object updateExpense(
-            @PathVariable UUID id,
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody UpdateExpenseRequest request
-    ) {
-        if (userDetails == null) {
-            throw new RuntimeException("Unauthenticated");
-        }
-
-        User user = userRepository
-                .findByEmail(userDetails.getUsername())
-                .orElseThrow();
-
-        return expenseService.updateExpense(id,
-                user,
-                request.getAmount(),
-                request.getDescription(),
-                request.getCategory()
-        );
-    }
-
 }

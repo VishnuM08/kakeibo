@@ -1,8 +1,12 @@
 package com.kakeibo.backend.service;
 
+import com.kakeibo.backend.dto.CreateExpenseRequest;
+import com.kakeibo.backend.dto.ExpenseResponse;
+import com.kakeibo.backend.dto.UpdateExpenseRequest;
 import com.kakeibo.backend.entity.Expense;
 import com.kakeibo.backend.entity.User;
 import com.kakeibo.backend.repository.ExpenseRepository;
+import com.kakeibo.backend.security.CustomUserDetails;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,84 +24,113 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final BudgetService budgetService;
 
-    //    public Expense createExpense(
-//            User user,
-//            Double amount,
-//            String description,
-//            String category,
-//            Instant expenseDateTime
-//    ) {
-//        Expense expense = new Expense();
-//        expense.setUser(user);
-//        expense.setAmount(amount);
-//        expense.setDescription(description);
-//        expense.setCategory(category);
-//        expense.setExpenseDateTime(expenseDateTime !=null ? expenseDateTime : Instant.now());
-//
-//        return expenseRepository.save(expense);
-//    }
+    // ===============================
+    // CREATE
+    // ===============================
     @Transactional
-    public Expense createExpense(
-            User user,
-            Double amount,
-            String description,
-            String category,
-            Instant expenseDateTime
+    public ExpenseResponse createExpense(
+            CreateExpenseRequest req,
+            CustomUserDetails userDetails
     ) {
-        if (user == null) {
-            throw new IllegalStateException("Authenticated user is null");
-        }
+        User user = userDetails.getUser();
 
         Expense expense = new Expense();
-        expense.setUser(user); // 🔥 THIS WAS MISSING OR BROKEN
-        expense.setAmount(amount);
-        expense.setDescription(description);
-        expense.setCategory(category);
+        expense.setUser(user);
+        expense.setAmount(req.getAmount());
+        expense.setDescription(req.getDescription());
+        expense.setCategory(req.getCategory());
         expense.setExpenseDateTime(
-                expenseDateTime != null ? expenseDateTime : Instant.now()
+                req.getExpenseDateTime() != null
+                        ? req.getExpenseDateTime()
+                        : Instant.now()
         );
 
-        Expense savedExpense = expenseRepository.save(expense);
+        Expense saved = expenseRepository.save(expense);
 
-        // Reduce budget
-        budgetService.reduceBudget(user, amount);
+        // 🔥 Reduce budget
+        budgetService.reduceBudget(user, req.getAmount());
 
-        return savedExpense;
+        return toResponse(saved);
     }
 
 
-
-    public List<Expense> getUserExpenses(User user) {
-        return expenseRepository.findByUser(user);
+    // ===============================
+    // READ
+    // ===============================
+    public List<ExpenseResponse> getUserExpenses(CustomUserDetails userDetails) {
+        return expenseRepository.findByUser(userDetails.getUser())
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public void deleteExpense(UUID expenseId, User user) {
-        Expense expense = expenseRepository
-                .findById(expenseId)
+
+    // ===============================
+    // UPDATE
+    // ===============================
+    @Transactional
+    public ExpenseResponse updateExpense(
+            UUID expenseId,
+            UpdateExpenseRequest req,
+            CustomUserDetails userDetails
+    ) {
+        Expense expense = expenseRepository.findById(expenseId)
                 .orElseThrow(() -> new RuntimeException("Expense not found"));
 
+        User user = userDetails.getUser();
+
         if (!expense.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Not allowed to delete this expense");
+            throw new RuntimeException("Unauthorized");
+        }
+
+        double oldAmount = expense.getAmount();
+        double newAmount = req.getAmount();
+
+        expense.setAmount(newAmount);
+        expense.setCategory(req.getCategory());
+        expense.setDescription(req.getDescription());
+        expense.setExpenseDateTime(req.getExpenseDateTime());
+
+        Expense saved = expenseRepository.save(expense);
+
+        // 🔥 Adjust budget delta
+        budgetService.adjustBudget(user, oldAmount - newAmount);
+
+        return toResponse(saved);
+    }
+
+    // ===============================
+    // DELETE
+    // ===============================
+    @Transactional
+    public void deleteExpense(
+            UUID expenseId,
+            CustomUserDetails userDetails
+    ) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new RuntimeException("Expense not found"));
+
+        User user = userDetails.getUser();
+
+        if (!expense.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized");
         }
 
         expenseRepository.delete(expense);
+
+        // 🔥 Restore budget
+        budgetService.restoreBudget(user, expense.getAmount());
     }
 
-    public Expense updateExpense(UUID expenseId, User user, Double amount,
-                                 String description,
-                                 String category) {
-        Expense expense = expenseRepository
-                .findById(expenseId)
-                .orElseThrow(() -> new RuntimeException("Expense not found"));
-
-        if (!expense.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Not allowed to delete this expense");
-
-        }
-        expense.setAmount(amount);
-        expense.setDescription(description);
-        expense.setCategory(category);
-
-        return expenseRepository.save(expense);
+    private ExpenseResponse toResponse(Expense expense) {
+        return new ExpenseResponse(
+                expense.getId(),
+                expense.getAmount(),
+                expense.getDescription(),
+                expense.getCategory(),
+                expense.getExpenseDateTime()
+        );
     }
+
+
 }

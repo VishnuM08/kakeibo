@@ -8,53 +8,37 @@ const formatINR = (value: number) =>
   }).format(value);
 
 interface BudgetWarningProps {
-  monthlyBudget: number;
-  currentSpending: number;
+  budget: {
+    monthlyAmount: number;
+    remainingAmount: number;
+  } | null;
   onSetBudget: () => void;
   isDarkMode?: boolean;
 }
 
 export function BudgetWarning({
-  monthlyBudget,
-  currentSpending,
+  budget,
   onSetBudget,
   isDarkMode,
 }: BudgetWarningProps) {
-  const percentage = (currentSpending / monthlyBudget) * 100;
-  const isOverBudget = percentage >= 100;
-  const isWarning = percentage >= 80 && percentage < 100;
-
-  // Calculate daily average and remaining days
-  const today = new Date();
-  const daysInMonth = new Date(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    0,
-  ).getDate();
-  const currentDay = today.getDate();
-  const daysRemaining = daysInMonth - currentDay + 1;
-  const dailyAverage = currentSpending / currentDay;
-  const projectedSpending = dailyAverage * daysInMonth;
-  const isProjectedOverBudget = projectedSpending > monthlyBudget;
-
-  // If no budget is set
-  if (!monthlyBudget) {
+  // 1️⃣ Handle no-budget FIRST
+  if (!budget) {
     return (
       <div className="bg-gradient-to-br from-[#f7b731] to-[#fa8231] rounded-[20px] p-5 mb-5 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
             <TrendingUp className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
-          <div className="flex-1">
+          <div>
             <h3 className="text-[17px] font-bold text-white mb-1">
               Set Your Monthly Budget
             </h3>
-            <p className="text-[15px] text-white/90 mb-3 leading-snug">
-              Track your spending better by setting a monthly budget goal.
+            <p className="text-[15px] text-white/90 mb-3">
+              Track your spending better by setting a monthly budget.
             </p>
             <button
               onClick={onSetBudget}
-              className="bg-white/90 hover:bg-white text-[#fa8231] px-4 py-2 rounded-[10px] font-semibold text-[15px] transition-colors"
+              className="bg-white text-[#fa8231] px-4 py-2 rounded-[10px] font-semibold"
             >
               Set Budget
             </button>
@@ -63,6 +47,30 @@ export function BudgetWarning({
       </div>
     );
   }
+
+  // 2️⃣ DERIVE values from backend budget (single source of truth)
+  const monthlyBudget = budget.monthlyAmount;
+  const currentSpending = monthlyBudget - budget.remainingAmount;
+
+  const percentage = (currentSpending / monthlyBudget) * 100;
+  const isOverBudget = percentage >= 100;
+  const isWarning = percentage >= 80 && percentage < 100;
+
+  // 3️⃣ Time-based projections
+  const today = new Date();
+  const daysInMonth = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0,
+  ).getDate();
+
+  const currentDay = today.getDate();
+  const daysRemaining = daysInMonth - currentDay + 1;
+
+  const dailyAverage = currentDay > 0 ? currentSpending / currentDay : 0;
+
+  const projectedSpending = dailyAverage * daysInMonth;
+  const isProjectedOverBudget = projectedSpending > monthlyBudget;
 
   // If over budget
   if (isOverBudget) {

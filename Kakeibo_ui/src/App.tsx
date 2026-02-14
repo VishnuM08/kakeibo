@@ -128,7 +128,7 @@ export default function App() {
     setIsUnlocked(true);
   };
   /*
-  const handleLogout = () => {
+  const handleLogout = () => { 
     // TODO: BACKEND INTEGRATION - Call logout API
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('user_data');

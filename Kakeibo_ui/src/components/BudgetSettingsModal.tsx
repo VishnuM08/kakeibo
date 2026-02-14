@@ -1,6 +1,7 @@
 import { X, Target } from "lucide-react";
 import { useState } from "react";
 
+
 interface BudgetSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
