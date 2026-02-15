@@ -37,20 +37,6 @@ export interface Budget {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface SavingsGoal {
-  id: string;
-  userId: string;
-  name: string;
-  targetAmount: number;
-  currentAmount: number;
-  deadline: string;
-  category?: string;
-  color: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface RecurringExpense {
   id: string;
   userId: string;
@@ -142,6 +128,7 @@ const getAuthHeaders = (): HeadersInit => {
 
 import axios from "axios";
 import { BackendExpense } from "../types/BackendExpense";
+import { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
 
 const api = axios.create({
   baseURL: "http://localhost:8080",
@@ -501,61 +488,68 @@ export async function setBudget(amount: number) {
 //   // return apiRequest<SavingsGoal[]>('/savings-goals');
 // }
 
-/**
- * POST /savings-goals
- * Create new savings goal
- *
- * BACKEND ENDPOINT: POST /api/savings-goals
- * REQUEST BODY: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
- * RESPONSE: SavingsGoal
- */
-// export async function createSavingsGoal(
-//   goal: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
-// ): Promise<SavingsGoal> {
-//   // TODO: Replace with actual API call
-//   console.log('[API] Create savings goal:', goal);
 
-//   return apiRequest<SavingsGoal>('/savings-goals', {
-//     method: 'POST',
-//     body: JSON.stringify(goal),
-//   });
-// }
+export async function getSavingsGoals(): Promise<SavingsGoal[]> {
+  const response = await api.get<BackendSavingsGoal[]>("/savings");
+  console.log("[API] Get savings goals response:", response.data);
+  return response.data.map((bg) => ({
+    id: bg.id,
+    userId: bg.user?.id || 'unknown',
+    name: bg.goalName,
+    targetAmount: bg.amount,
+    currentAmount: bg.amount - bg.remainingAmount, 
+    deadline: bg.date,
+    color: '#007aff', 
+    createdAt: bg.createdAt,
+    updatedAt: bg.updatedAt,
+  }));
+}
 
-/**
- * PUT /savings-goals/:id
- * Update savings goal (e.g., add to currentAmount)
- *
- * BACKEND ENDPOINT: PUT /api/savings-goals/{id}
- * REQUEST BODY: Partial<SavingsGoal>
- * RESPONSE: SavingsGoal
- */
-// export async function updateSavingsGoal(
-//   id: string,
-//   updates: Partial<SavingsGoal>
-// ): Promise<SavingsGoal> {
-//   // TODO: Replace with actual API call
-//   console.log('[API] Update savings goal:', id, updates);
+export async function createSavingsGoal(goal: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currentAmount' | 'color'>) {
+  const payload = {
+    goalName: goal.name,
+    amount: goal.targetAmount,
+    date: goal.deadline,
+  };
+  const response = await api.post<BackendSavingsGoal>("/savings", payload);
+  console.log("[API] Create savings goal response:", response.data);
+  
+  const bg = response.data;
+  return {
+    id: bg.id,
+    userId: bg.user?.id || 'unknown',
+    name: bg.goalName,
+    targetAmount: bg.amount,
+    currentAmount: bg.amount - bg.remainingAmount,
+    deadline: bg.date,
+    color: '#007aff',
+    createdAt: bg.createdAt,
+    updatedAt: bg.updatedAt,
+  };
+}
 
-//   return apiRequest<SavingsGoal>(`/savings-goals/${id}`, {
-//     method: 'PUT',
-//     body: JSON.stringify(updates),
-//   });
-// }
+export async function updateSavingsGoal(id: string, updates: { addAmount: number }) {
+  const response = await api.put<BackendSavingsGoal>(`/savings/${id}`, updates);
+  console.log("[API] Update savings goal response:", response.data);
+  
+  const bg = response.data;
+  return {
+    id: bg.id,
+    userId: bg.user?.id || 'unknown',
+    name: bg.goalName,
+    targetAmount: bg.amount,
+    currentAmount: bg.amount - bg.remainingAmount,
+    deadline: bg.date,
+    color: '#007aff',
+    createdAt: bg.createdAt,
+    updatedAt: bg.updatedAt,
+  };
+}
 
-/**
- * DELETE /savings-goals/:id
- * Delete savings goal
- *
- * BACKEND ENDPOINT: DELETE /api/savings-goals/{id}
- */
-// export async function deleteSavingsGoal(id: string): Promise<void> {
-//   // TODO: Replace with actual API call
-//   console.log('[API] Delete savings goal:', id);
-
-//   return apiRequest<void>(`/savings-goals/${id}`, {
-//     method: 'DELETE',
-//   });
-// }
+export async function deleteSavingsGoal(id: string): Promise<void> {
+  await api.delete(`/savings/${id}`);
+  console.log("[API] Deleted savings goal:", id);
+}
 
 // ==================== CUSTOM CATEGORY APIs ====================
 

@@ -52,6 +52,7 @@ import { RecurringExpensesWidget } from "./RecurringExpensesWidget";
 import { SavingsGoalsView } from "./SavingsGoalsView";
 import { SearchFilters } from "./SearchFilters";
 import { UpcomingBillsWidget } from "./UpcomingBillsWidget";
+import Test from "../TestCompo/Test";
 import {
   mapApiExpenseToUI,
   mapUIToBackendExpense,

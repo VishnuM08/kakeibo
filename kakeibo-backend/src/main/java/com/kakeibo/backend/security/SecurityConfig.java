@@ -44,7 +44,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/auth/me",
                                 "/expenses/**",
-                                "/budget/**"
+                                "/budget/**",
+                                "/savings/**"
                         ).authenticated()
 
                         .anyRequest().authenticated()

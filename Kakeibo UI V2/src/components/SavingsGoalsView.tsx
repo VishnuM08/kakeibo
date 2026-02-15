@@ -1,6 +1,7 @@
 import { ArrowLeft, Plus, Target, TrendingUp, X, Edit2 } from 'lucide-react';
-import { useState } from 'react';
-import { SavingsGoal } from '../services/api';
+import { useState, useEffect } from 'react';
+import { SavingsGoal } from '../types/SavingsGoal.ts';
+import { getSavingsGoals, createSavingsGoal, updateSavingsGoal, deleteSavingsGoal } from '../services/api';
 
 /**
  * Savings Goals View Component
@@ -18,12 +19,7 @@ interface SavingsGoalsViewProps {
 }
 
 export function SavingsGoalsView({ onClose, isDarkMode = false }: SavingsGoalsViewProps) {
-  // TODO: BACKEND INTEGRATION - Fetch from API on mount
-  // useEffect(() => { getSavingsGoals().then(setGoals); }, []);
-  
-  const [goals, setGoals] = useState<SavingsGoal[]>([
-    // Mock data - will be fetched from backend
-  ]);
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [newGoalName, setNewGoalName] = useState('');
   const [newGoalTarget, setNewGoalTarget] = useState('');
@@ -31,62 +27,70 @@ export function SavingsGoalsView({ onClose, isDarkMode = false }: SavingsGoalsVi
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
   const [addAmount, setAddAmount] = useState('');
 
+  useEffect(() => {
+    loadGoals();
+  }, []);
+
+  const loadGoals = async () => {
+    try {
+      const fetchedGoals = await getSavingsGoals();
+      setGoals(fetchedGoals);
+    } catch (error) {
+      console.error('Failed to fetch savings goals:', error);
+    }
+  };
+
   const handleCreateGoal = async () => {
     if (!newGoalName.trim() || !newGoalTarget || !newGoalDeadline) return;
 
-    // TODO: BACKEND INTEGRATION - Call createSavingsGoal API
-    // const newGoal = await createSavingsGoal({
-    //   name: newGoalName,
-    //   targetAmount: parseFloat(newGoalTarget),
-    //   currentAmount: 0,
-    //   deadline: newGoalDeadline,
-    //   color: '#007aff'
-    // });
+    try {
+      const newGoal = await createSavingsGoal({
+        name: newGoalName,
+        targetAmount: parseFloat(newGoalTarget),
+        deadline: newGoalDeadline,
+      });
 
-    const mockGoal: SavingsGoal = {
-      id: Date.now().toString(),
-      userId: 'user-1',
-      name: newGoalName,
-      targetAmount: parseFloat(newGoalTarget),
-      currentAmount: 0,
-      deadline: newGoalDeadline,
-      color: '#007aff',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setGoals([...goals, mockGoal]);
-    setNewGoalName('');
-    setNewGoalTarget('');
-    setNewGoalDeadline('');
-    setIsAddingGoal(false);
+      setGoals([...goals, newGoal]);
+      setNewGoalName('');
+      setNewGoalTarget('');
+      setNewGoalDeadline('');
+      setIsAddingGoal(false);
+    } catch (error) {
+      console.error('Failed to create savings goal:', error);
+      alert('Failed to create savings goal. Please try again.');
+    }
   };
 
   const handleAddToGoal = async (goalId: string) => {
     const amount = parseFloat(addAmount);
     if (isNaN(amount) || amount <= 0) return;
 
-    // TODO: BACKEND INTEGRATION - Call updateSavingsGoal API
-    // await updateSavingsGoal(goalId, {
-    //   currentAmount: goal.currentAmount + amount
-    // });
+    try {
+      const updatedGoal = await updateSavingsGoal(goalId, {
+        addAmount: amount
+      });
 
-    setGoals(goals.map(g => 
-      g.id === goalId 
-        ? { ...g, currentAmount: g.currentAmount + amount }
-        : g
-    ));
-    setAddAmount('');
-    setSelectedGoal(null);
+      setGoals(goals.map(g => 
+        g.id === goalId ? updatedGoal : g
+      ));
+      setAddAmount('');
+      setSelectedGoal(null);
+    } catch (error) {
+      console.error('Failed to update savings goal:', error);
+      alert('Failed to add amount. Please try again.');
+    }
   };
 
   const handleDeleteGoal = async (goalId: string) => {
     if (!window.confirm('Delete this savings goal?')) return;
 
-    // TODO: BACKEND INTEGRATION - Call deleteSavingsGoal API
-    // await deleteSavingsGoal(goalId);
-
-    setGoals(goals.filter(g => g.id !== goalId));
+    try {
+      await deleteSavingsGoal(goalId);
+      setGoals(goals.filter(g => g.id !== goalId));
+    } catch (error) {
+      console.error('Failed to delete savings goal:', error);
+      alert('Failed to delete savings goal. Please try again.');
+    }
   };
 
   return (

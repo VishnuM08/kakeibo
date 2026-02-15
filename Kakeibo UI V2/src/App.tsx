@@ -6,6 +6,7 @@ import { SettingsView } from "./components/SettingsView";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "./utils/toast";
 import { getMe } from "./services/api";
+import Test from "./TestCompo/Test";
 
 /**
  * App Wrapper Component
@@ -84,6 +85,9 @@ export default function App() {
     setIsUnlocked(true);
   };
 
+  const login = () => {
+    console.log("Login successful");
+  };
   const handleLogout = () => {
     localStorage.removeItem("jwt_token");
     setIsAuthenticated(false);
@@ -107,6 +111,7 @@ export default function App() {
 
   // Show login screen if not authenticated
   if (!isAuthenticated) {
+    // return <Test onAuthSuccess={login} isDarkMode={isDarkMode} />;
     return (
       <AuthScreen onAuthSuccess={handleAuthSuccess} isDarkMode={isDarkMode} />
     );
