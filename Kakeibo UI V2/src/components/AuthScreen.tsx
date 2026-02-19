@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Lock, Mail, User, Eye, EyeOff } from 'lucide-react';
-import { login, register } from '../services/api';
+import { login, register, setAuthToken } from '../services/api';
+import { Preferences } from '@capacitor/preferences';
 
 /**
  * Authentication Screen Component
@@ -38,8 +39,8 @@ export function AuthScreen({ onAuthSuccess, isDarkMode = false }: AuthScreenProp
         const response = await login({ email, password });
         
         // Store token and user data
-        localStorage.setItem('jwt_token', response.token);
-        localStorage.setItem('user_data', JSON.stringify(response.user));
+        await setAuthToken(response.token);
+        await Preferences.set({ key: 'user_data', value: JSON.stringify(response.user) });
         
         onAuthSuccess(response.token, response.user);
       } else {
@@ -53,12 +54,14 @@ export function AuthScreen({ onAuthSuccess, isDarkMode = false }: AuthScreenProp
         const response = await register({ email, password, name });
         
         // Store token and user data
-        localStorage.setItem('jwt_token', response.token);
-        localStorage.setItem('user_data', JSON.stringify(response.user));
+        await setAuthToken(response.token);
+        await Preferences.set({ key: 'user_data', value: JSON.stringify(response.user) });
         
         onAuthSuccess(response.token, response.user);
       }
     } catch (err: any) {
+      console.error("Login Error:", err);
+      alert(`Login Failed: ${err.message}`);
       setError(err.message || 'Authentication failed. Please try again.');
       setIsLoading(false);
     }

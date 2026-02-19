@@ -1,0 +1,11 @@
+{
+  "appId": "com.aignite.kakeibo",
+  "appName": "Kakeibo",
+  "webDir": "build",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

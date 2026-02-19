@@ -5,8 +5,9 @@ import { PINLockScreen } from "./components/PINLockScreen";
 import { SettingsView } from "./components/SettingsView";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "./utils/toast";
-import { getMe } from "./services/api";
-import Test from "./TestCompo/Test";
+import { getMe, getAuthToken, removeAuthToken } from "./services/api";
+import { Preferences } from "@capacitor/preferences";
+// import Test from "./TestCompo/Test";
 
 /**
  * App Wrapper Component
@@ -40,24 +41,28 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isPINEnabled, setIsPINEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const stored = localStorage.getItem("kakeibo_dark_mode");
-    return stored === "true";
-  });
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  useEffect(() => {
+    (async () => {
+        const { value } = await Preferences.get({ key: "kakeibo_dark_mode" });
+        if (value) setIsDarkMode(value === "true");
+    })();
+  }, []);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("jwt_token");
-
-    if (!token) return;
-
     (async () => {
+      const token = await getAuthToken();
+
+      if (!token) return;
+
       try {
         const user = await getMe();
         setUser(user);
         setIsAuthenticated(true);
 
-        const pinEnabled = localStorage.getItem("kakeibo_pin_enabled");
+        const { value: pinEnabled } = await Preferences.get({ key: "kakeibo_pin_enabled" });
         if (pinEnabled === "true") {
           setIsPINEnabled(true);
           setIsUnlocked(false);
@@ -66,17 +71,13 @@ export default function App() {
         }
       } catch (error) {
         // Token invalid or expired
-        localStorage.removeItem("jwt_token");
-        localStorage.removeItem("user_data");
+        await removeAuthToken();
+        await Preferences.remove({ key: "user_data" });
         setIsAuthenticated(false);
         setUser(null);
       }
     })();
-    // Load dark mode preference
-    const darkMode = localStorage.getItem("kakeibo_dark_mode");
-    if (darkMode) {
-      setIsDarkMode(darkMode === "true");
-    }
+    // Load dark mode preference (handled above)
   }, []);
 
   const handleAuthSuccess = (token: string, userData: any) => {
@@ -88,8 +89,8 @@ export default function App() {
   const login = () => {
     console.log("Login successful");
   };
-  const handleLogout = () => {
-    localStorage.removeItem("jwt_token");
+  const handleLogout = async () => {
+    await removeAuthToken();
     setIsAuthenticated(false);
     setIsUnlocked(false);
     setUser(null);
@@ -99,14 +100,15 @@ export default function App() {
     setIsUnlocked(true);
   };
 
-  const handleEnablePINLock = () => {
+  const handleEnablePINLock = async () => {
     setIsPINEnabled(true);
+    // await Preferences.set({ key: 'kakeibo_pin_enabled', value: 'true' }); // (Ideally persisted)
   };
 
-  const toggleDarkMode = () => {
+  const toggleDarkMode = async () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
-    localStorage.setItem("kakeibo_dark_mode", newMode.toString());
+    await Preferences.set({ key: "kakeibo_dark_mode", value: newMode.toString() });
   };
 
   // Show login screen if not authenticated

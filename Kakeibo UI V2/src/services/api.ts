@@ -79,35 +79,29 @@ export interface RegisterRequest {
  * Get JWT token from localStorage
  * BACKEND INTEGRATION: Token will be stored after successful login
  */
-const getAuthToken = (): string | null => {
-  return localStorage.getItem("jwt_token");
+/**
+ * Get JWT token from Storage
+ */
+export const getAuthToken = async (): Promise<string | null> => {
+  const { value } = await Preferences.get({ key: "auth_token" });
+  return value;
 };
 
 /**
- * Set JWT token in localStorage
+ * Set JWT token in Storage
  */
-const setAuthToken = (token: string): void => {
-  localStorage.setItem("jwt_token", token);
+export const setAuthToken = async (token: string): Promise<void> => {
+  await Preferences.set({ key: "auth_token", value: token });
 };
 
 /**
- * Remove JWT token from localStorage (logout)
+ * Remove JWT token from Storage (logout)
  */
-const removeAuthToken = (): void => {
-  localStorage.removeItem("jwt_token");
+export const removeAuthToken = async (): Promise<void> => {
+  await Preferences.remove({ key: "auth_token" });
 };
 
-/**
- * Create headers with JWT token
- * BACKEND INTEGRATION: All authenticated requests should include this header
- */
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
+// Interceptor is already correct, but let's make sure it matches
 
 /**
  * Generic API request handler with error handling
@@ -128,26 +122,59 @@ const getAuthHeaders = (): HeadersInit => {
 
 import axios from "axios";
 import { BackendExpense } from "../types/BackendExpense";
+export type { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
 import { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
+import { Preferences } from "@capacitor/preferences";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080",
+  //baseURL: "http://localhost:8080",
+  //baseURL: "http://10.0.2.2:8080",
+  baseURL: "http://192.168.29.10:8080",
+  timeout: 5000, // Fail after 5 seconds
 });
 
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("jwt_token");
-    if (token) {
-      config.headers["Authorization"] = `Bearer ${token}`;
-    }
-    return config;
-  },
+// api.interceptors.request.use(
+//   (config) => {
+//     const token = localStorage.getItem("jwt_token");
+//     if (token) {
+//       config.headers["Authorization"] = `Bearer ${token}`;
+//     }
+//     return config;
+//   },
+//   (error) => {
+//     return Promise.reject(error);
+//   },
+// );
+
+api.interceptors.response.use(
+  (response) => response,
   (error) => {
+    // Log the error for debugging
+    console.error("API Error:", error);
+    
+    // Alert the user (temporary for debugging)
+    if (error.message === "Network Error") {
+      alert(`Network Error: ${error.message}\nURL: ${error.config?.url}\nBaseURL: ${error.config?.baseURL}\n\nCheck if backend is running at ${error.config?.baseURL}`);
+    } else {
+      alert(`API Error: ${error.message}\nStatus: ${error.response?.status}`);
+    }
+    
     return Promise.reject(error);
-  },
+  }
 );
 
+api.interceptors.request.use(async (config) => {
+  const { value } = await Preferences.get({ key: "auth_token" });
+
+  if (value) {
+    config.headers.Authorization = `Bearer ${value}`;
+  }
+
+  return config;
+});
+
 export default api;
+
 
 export async function getMe() {
   const response = await api.get("/auth/me");

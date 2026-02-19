@@ -499,13 +499,15 @@ export function escapeHTML(str: string): string {
 // SESSION MANAGEMENT
 // ================================
 
+import { Preferences } from '@capacitor/preferences';
+
 /**
  * Check if session is active and valid
  * 
  * @returns True if user has valid session
  */
-export function hasValidSession(): boolean {
-  const token = localStorage.getItem('jwt_token');
+export async function hasValidSession(): Promise<boolean> {
+  const { value: token } = await Preferences.get({ key: 'auth_token' });
   if (!token) return false;
   return !isTokenExpired(token);
 }
@@ -513,10 +515,10 @@ export function hasValidSession(): boolean {
 /**
  * Clear all session data (logout)
  */
-export function clearSession(): void {
-  localStorage.removeItem('jwt_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user_data');
+export async function clearSession(): Promise<void> {
+  await Preferences.remove({ key: 'auth_token' });
+  await Preferences.remove({ key: 'user_data' });
+  // localStorage.removeItem('refresh_token'); // Not used?
   
   // Clear rate limit data
   Object.keys(localStorage)

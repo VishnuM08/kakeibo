@@ -15,6 +15,7 @@
 
 import api, {
   updateExpense,
+  getAuthToken,
   SavingsGoal,
   RecurringExpense,
   Budget,
@@ -188,7 +189,7 @@ export async function syncWithBackend(): Promise<void> {
 
             console.log("[SYNC] updateExpense request", op.data.id, {
               updates,
-              tokenPresent: !!localStorage.getItem("jwt_token"),
+              tokenPresent: !!(await getAuthToken()),
             });
 
             await updateExpense(op.data.id, updates);
