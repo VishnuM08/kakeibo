@@ -28,15 +28,15 @@ public class TestUserController {
         return userRepository.save(user);
     }
 
-    @PostMapping("/auth/register")
-    public User registerUser(
-            @Valid @RequestBody RegisterRequest request) {
-        return userService.createUser(
-                request.getName(),
-                request.getEmail(),
-                request.getPassword()
-        );
-
-    }
+//    @PostMapping("/auth/register")
+//    public User registerUser(
+//            @Valid @RequestBody RegisterRequest request) {
+//        return userService.createUser(
+//                request.getName(),
+//                request.getEmail(),
+//                request.getPassword()
+//        );
+//
+//    }
 
 }

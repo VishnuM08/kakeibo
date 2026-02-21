@@ -126,11 +126,16 @@ export type { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
 import { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
 import { Preferences } from "@capacitor/preferences";
 
+import { Capacitor } from "@capacitor/core";
+
+// When running in a browser (web), use the /api proxy to avoid CORS issues.
+// When running on native devices, use the full URL.
+const isNative = Capacitor.isNativePlatform();
+const baseURL = isNative ? "https://api.kakeibo.theaignite.app" : "/api";
+
 const api = axios.create({
-  //baseURL: "http://localhost:8080",
-  //baseURL: "http://10.0.2.2:8080",
-  baseURL: "http://192.168.29.10:8080",
-  timeout: 5000, // Fail after 5 seconds
+  baseURL: baseURL,
+  timeout: 10000,
 });
 
 // api.interceptors.request.use(
