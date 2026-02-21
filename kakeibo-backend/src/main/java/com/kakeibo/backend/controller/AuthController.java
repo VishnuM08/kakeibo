@@ -59,6 +59,28 @@ public class AuthController {
         );
     }
 
+    @GetMapping("/me")
+    public UserProfileResponse me(Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+
+        String email = authentication.getName(); // JWT subject
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found")
+                );
+
+        return new UserProfileResponse(
+                user.getId().toString(),
+                user.getEmail(),
+                user.getName()
+        );
+    }
+
+
 //    @PostMapping("/auth/register")
 //    public User registerUser(
 //            @Valid @RequestBody RegisterRequest request) {

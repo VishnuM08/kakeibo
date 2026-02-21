@@ -156,30 +156,40 @@ api.interceptors.response.use(
   (error) => {
     // Log the error for debugging
     console.error("API Error:", error);
-    
-    // Alert the user (temporary for debugging)
+
+    // Only alert for actual Network Errors during development
+    // 401/403 are handled gracefully by the app logic
     if (error.message === "Network Error") {
-      alert(`Network Error: ${error.message}\nURL: ${error.config?.url}\nBaseURL: ${error.config?.baseURL}\n\nCheck if backend is running at ${error.config?.baseURL}`);
-    } else {
-      alert(`API Error: ${error.message}\nStatus: ${error.response?.status}`);
+      console.error("Network Error - check if backend is running");
     }
-    
+
     return Promise.reject(error);
-  }
+  },
 );
 
 api.interceptors.request.use(async (config) => {
-  const { value } = await Preferences.get({ key: "auth_token" });
-
-  if (value) {
-    config.headers.Authorization = `Bearer ${value}`;
+  try {
+    const { value: token } = await Preferences.get({ key: "auth_token" });
+    if (token) {
+      console.log(
+        `[API Request] ${config.method?.toUpperCase()} ${config.url} - Token present`,
+      );
+      // Use common patterns for setting headers
+      if (config.headers) {
+        config.headers.Authorization = `Bearer ${token.trim()}`;
+      }
+    } else {
+      console.log(
+        `[API Request] ${config.method?.toUpperCase()} ${config.url} - No token`,
+      );
+    }
+  } catch (err) {
+    console.error("[API Request Interceptor Error]", err);
   }
-
   return config;
 });
 
 export default api;
-
 
 export async function getMe() {
   const response = await api.get("/auth/me");
@@ -520,24 +530,28 @@ export async function setBudget(amount: number) {
 //   // return apiRequest<SavingsGoal[]>('/savings-goals');
 // }
 
-
 export async function getSavingsGoals(): Promise<SavingsGoal[]> {
   const response = await api.get<BackendSavingsGoal[]>("/savings");
   console.log("[API] Get savings goals response:", response.data);
   return response.data.map((bg) => ({
     id: bg.id,
-    userId: bg.user?.id || 'unknown',
+    userId: bg.user?.id || "unknown",
     name: bg.goalName,
     targetAmount: bg.amount,
-    currentAmount: bg.amount - bg.remainingAmount, 
+    currentAmount: bg.amount - bg.remainingAmount,
     deadline: bg.date,
-    color: '#007aff', 
+    color: "#007aff",
     createdAt: bg.createdAt,
     updatedAt: bg.updatedAt,
   }));
 }
 
-export async function createSavingsGoal(goal: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currentAmount' | 'color'>) {
+export async function createSavingsGoal(
+  goal: Omit<
+    SavingsGoal,
+    "id" | "userId" | "createdAt" | "updatedAt" | "currentAmount" | "color"
+  >,
+) {
   const payload = {
     goalName: goal.name,
     amount: goal.targetAmount,
@@ -545,34 +559,37 @@ export async function createSavingsGoal(goal: Omit<SavingsGoal, 'id' | 'userId' 
   };
   const response = await api.post<BackendSavingsGoal>("/savings", payload);
   console.log("[API] Create savings goal response:", response.data);
-  
+
   const bg = response.data;
   return {
     id: bg.id,
-    userId: bg.user?.id || 'unknown',
+    userId: bg.user?.id || "unknown",
     name: bg.goalName,
     targetAmount: bg.amount,
     currentAmount: bg.amount - bg.remainingAmount,
     deadline: bg.date,
-    color: '#007aff',
+    color: "#007aff",
     createdAt: bg.createdAt,
     updatedAt: bg.updatedAt,
   };
 }
 
-export async function updateSavingsGoal(id: string, updates: { addAmount: number }) {
+export async function updateSavingsGoal(
+  id: string,
+  updates: { addAmount: number },
+) {
   const response = await api.put<BackendSavingsGoal>(`/savings/${id}`, updates);
   console.log("[API] Update savings goal response:", response.data);
-  
+
   const bg = response.data;
   return {
     id: bg.id,
-    userId: bg.user?.id || 'unknown',
+    userId: bg.user?.id || "unknown",
     name: bg.goalName,
     targetAmount: bg.amount,
     currentAmount: bg.amount - bg.remainingAmount,
     deadline: bg.date,
-    color: '#007aff',
+    color: "#007aff",
     createdAt: bg.createdAt,
     updatedAt: bg.updatedAt,
   };

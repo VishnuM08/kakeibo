@@ -40,8 +40,16 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/auth/login",
                                 "/auth/register",
+
+                                // ✅ Actuator (ALL, not just health)
+                                "/actuator/**",
+
+                                // ✅ Error endpoint (CRITICAL)
+                                "/error",
+
                                 "/test/**"
                         ).permitAll()
+
 
                         // 🔐 PROTECTED
                         .requestMatchers(

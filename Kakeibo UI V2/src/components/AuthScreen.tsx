@@ -41,14 +41,27 @@ export function AuthScreen({
         // TODO: BACKEND INTEGRATION - Call login API
         const response = await login({ email, password });
 
+        // Normalize user data (handle nested or top-level response)
+        const baseUser = response.user || response;
+        const userData = {
+          name:
+            baseUser.name ||
+            baseUser.username ||
+            baseUser.fullName ||
+            baseUser.email ||
+            "User",
+          email: baseUser.email,
+          id: baseUser.id,
+        };
+
         // Store token and user data
         await setAuthToken(response.token);
         await Preferences.set({
           key: "user_data",
-          value: JSON.stringify(response.user),
+          value: JSON.stringify(userData),
         });
 
-        onAuthSuccess(response.token, response.user);
+        onAuthSuccess(response.token, userData);
       } else {
         // TODO: BACKEND INTEGRATION - Call register API
         if (!name.trim()) {
@@ -59,14 +72,27 @@ export function AuthScreen({
 
         const response = await register({ email, password, name });
 
+        // Normalize user data
+        const baseUser = response.user || response;
+        const userData = {
+          name:
+            baseUser.name ||
+            baseUser.username ||
+            baseUser.fullName ||
+            baseUser.email ||
+            "User",
+          email: baseUser.email,
+          id: baseUser.id,
+        };
+
         // Store token and user data
         await setAuthToken(response.token);
         await Preferences.set({
           key: "user_data",
-          value: JSON.stringify(response.user),
+          value: JSON.stringify(userData),
         });
 
-        onAuthSuccess(response.token, response.user);
+        onAuthSuccess(response.token, userData);
       }
     } catch (err: any) {
       console.error("Login Error:", err);
@@ -291,18 +317,17 @@ export function AuthScreen({
         </div>
 
         {/* Footer */}
-        {/* Footer */}
         <div className="mt-6 text-center space-y-1">
           <p
             className={`text-[11px] ${
-              isDarkMode ? "text-white/30" : "text-black/30"
+              isDarkMode ? "text-white/50" : "text-black/60"
             }`}
           >
             © 2026 Aignite Technologies. All rights reserved.
           </p>
           <p
             className={`text-[11px] ${
-              isDarkMode ? "text-white/25" : "text-black/25"
+              isDarkMode ? "text-white/40" : "text-black/55"
             }`}
           >
             Designed and engineered by Lavish.
