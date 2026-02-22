@@ -104,11 +104,11 @@ export function AuthScreen({
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center px-5 ${
+      className={`min-h-screen flex flex-col items-center justify-center px-6 pt-safe pb-safe ${
         isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"
       }`}
     >
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md my-auto py-8">
         {/* Logo */}
         <div className="text-center mb-10">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051d5] flex items-center justify-center mx-auto mb-6 shadow-lg">

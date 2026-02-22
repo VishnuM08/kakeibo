@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { Preferences } from "@capacitor/preferences";
 //import { logout } from '../services/api';
 
@@ -33,6 +34,8 @@ interface SettingsViewProps {
   userEmail: string;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
+  displayScale: number;
+  onSetDisplayScale: (scale: number) => void;
 }
 
 export function SettingsView({
@@ -44,6 +47,8 @@ export function SettingsView({
   userEmail,
   isDarkMode,
   onToggleDarkMode,
+  displayScale,
+  onSetDisplayScale,
 }: SettingsViewProps) {
   const [showSetupPIN, setShowSetupPIN] = useState(false);
   const [newPIN, setNewPIN] = useState("");
@@ -108,7 +113,7 @@ export function SettingsView({
     <div
       className={`fixed inset-0 z-50 overflow-y-auto ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
     >
-      <div className="max-w-lg mx-auto px-5 py-6">
+      <div className="max-w-lg mx-auto px-6 py-6 pt-safe">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <button
@@ -265,7 +270,10 @@ export function SettingsView({
 
           {/* Dark Mode Toggle */}
           <button
-            onClick={onToggleDarkMode}
+            onClick={async () => {
+              await Haptics.impact({ style: ImpactStyle.Light });
+              onToggleDarkMode();
+            }}
             className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
               isDarkMode
                 ? "hover:bg-white/5 border-white/10"
@@ -306,6 +314,109 @@ export function SettingsView({
               />
             </div>
           </button>
+        </div>
+
+        {/* Display Settings */}
+        <div
+          className={`rounded-[20px] overflow-hidden mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
+        >
+          <div className="px-5 py-4">
+            <h3
+              className={`text-[17px] font-bold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}
+            >
+              Display size
+            </h3>
+            <p
+              className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+            >
+              Adjust overall application size
+            </p>
+          </div>
+
+          <div
+            className={`px-5 py-6 space-y-6 border-t ${
+              isDarkMode ? "border-white/10" : "border-black/5"
+            }`}
+          >
+            {/* Range Slider Container */}
+            <div className="space-y-6">
+              <div className="flex justify-between items-end mb-1 px-1">
+                <span
+                  className={`text-[12px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                >
+                  A
+                </span>
+                <span
+                  className={`text-[15px] font-bold ${isDarkMode ? "text-white/70" : "text-black/70"}`}
+                >
+                  Default
+                </span>
+                <span
+                  className={`text-[20px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                >
+                  A
+                </span>
+              </div>
+
+              <div className="relative pt-2 pb-6 flex flex-col items-center">
+                {/* Visual Tick Marks */}
+                <div className="absolute top-0 left-0 right-0 flex justify-between px-[14px]">
+                  {[0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3].map((val) => (
+                    <div
+                      key={val}
+                      className={`w-[1px] h-2 rounded-full ${
+                        isDarkMode ? "bg-white/20" : "bg-black/10"
+                      } ${val === 1.0 ? (isDarkMode ? "h-3 bg-white/40" : "h-3 bg-black/30") : ""}`}
+                    />
+                  ))}
+                </div>
+
+                <input
+                  type="range"
+                  min="0.7"
+                  max="1.3"
+                  step="0.1"
+                  value={displayScale}
+                  onChange={async (e) => {
+                    const newValue = parseFloat(e.target.value);
+                    if (newValue !== displayScale) {
+                      await Haptics.impact({ style: ImpactStyle.Light });
+                      onSetDisplayScale(newValue);
+                    }
+                  }}
+                  onBlur={async () => {
+                    await Preferences.set({
+                      key: "kakeibo_display_scale",
+                      value: displayScale.toString(),
+                    });
+                  }}
+                  className="custom-slider"
+                />
+              </div>
+
+              <div className="flex justify-between items-center px-1">
+                <p
+                  className={`text-[14px] font-semibold ${isDarkMode ? "text-white/60" : "text-black/60"}`}
+                >
+                  {Math.round(displayScale * 100)}%
+                </p>
+                {displayScale !== 1.0 && (
+                  <button
+                    onClick={async () => {
+                      onSetDisplayScale(1.0);
+                      await Preferences.set({
+                        key: "kakeibo_display_scale",
+                        value: "1.0",
+                      });
+                    }}
+                    className="text-[13px] font-bold text-[#007aff] px-3 py-1.5 rounded-full bg-[#007aff]/10 active:scale-95 transition-transform"
+                  >
+                    Reset to Default
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Data & Storage */}

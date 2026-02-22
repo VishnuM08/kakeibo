@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import {
   Budget,
   createExpense,
@@ -163,9 +164,13 @@ export function AppMain({
         const currentMonth = new Date().toISOString().slice(0, 7);
         saveBudgetLocally(amount, currentMonth);
         console.log("[BUDGET] Queued budget for sync:", amount);
+        await Haptics.impact({ style: ImpactStyle.Light }); // Haptic feedback even if queued
       }
     } catch (error) {
       console.error("[BUDGET] Failed to save budget:", error);
+      // Trigger Haptics
+      await Haptics.impact({ style: ImpactStyle.Light });
+
       // Keep local state updated even if save fails
     }
   };
@@ -242,6 +247,7 @@ export function AppMain({
         const savedUI = mapApiExpenseToUI(saved);
 
         setExpenses((prev) => prev.map((e) => (e.id === tempId ? savedUI : e)));
+        await Haptics.impact({ style: ImpactStyle.Light }); // Haptic feedback on successful add
 
         await refreshBudget();
       } catch (err) {
@@ -256,6 +262,7 @@ export function AppMain({
     } else {
       // 📴 OFFLINE → localStorage + sync queue
       saveExpenseLocally(optimisticExpense);
+      await Haptics.impact({ style: ImpactStyle.Light }); // Haptic feedback even if queued
     }
   };
 
@@ -283,6 +290,7 @@ export function AppMain({
           updatedExpense.id,
           mapUIToBackendExpense(updatedExpense),
         );
+        await Haptics.impact({ style: ImpactStyle.Light }); // Haptic feedback on successful update
       } catch (err) {
         console.error("🔴 Update failed:", err);
 
@@ -296,6 +304,7 @@ export function AppMain({
     } else {
       // 📴 OFFLINE → local + queue
       updateExpenseLocally(updatedExpense);
+      await Haptics.impact({ style: ImpactStyle.Light }); // Haptic feedback even if queued
     }
   };
   const handleDeleteExpense = async (id: string) => {
@@ -308,6 +317,7 @@ export function AppMain({
       try {
         // 2️⃣ ONLINE → backend
         await deleteExpense(id);
+        await Haptics.impact({ style: ImpactStyle.Light }); // Haptic feedback on successful delete
       } catch (err) {
         console.error("🔴 Delete failed:", err);
 
@@ -317,6 +327,7 @@ export function AppMain({
     } else {
       // 📴 OFFLINE → local + queue
       deleteExpenseLocally(id);
+      await Haptics.impact({ style: ImpactStyle.Light }); // Haptic feedback even if queued
     }
   };
 
@@ -435,7 +446,7 @@ export function AppMain({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-lg mx-auto px-5 py-6 safe-area-inset"
+        className="max-w-lg mx-auto px-6 py-4 pt-safe pb-24"
       >
         {/* Header */}
         <header className="mb-5">
@@ -779,7 +790,12 @@ export function AppMain({
       {/* Modals */}
       <AddExpenseModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={async () => {
+          // Trigger Haptics
+          await Haptics.impact({ style: ImpactStyle.Light });
+
+          setIsAddModalOpen(false);
+        }}
         onAdd={handleAddExpense}
         isDarkMode={isDarkMode}
       />
@@ -822,7 +838,12 @@ export function AppMain({
       {isEditModalOpen && editingExpense && (
         <EditExpenseModal
           isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
+          onClose={async () => {
+            // Trigger Haptics
+            await Haptics.impact({ style: ImpactStyle.Light });
+
+            setIsEditModalOpen(false);
+          }}
           expense={editingExpense}
           onSave={handleSaveEdit}
           onDelete={handleDeleteExpense}

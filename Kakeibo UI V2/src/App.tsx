@@ -21,6 +21,15 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [displayScale, setDisplayScale] = useState(1.0);
+
+  // Apply Display Scale to root
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--app-scale",
+      displayScale.toString(),
+    );
+  }, [displayScale]);
 
   // 1. Initial Preferences & Lifecycle Setup
   useEffect(() => {
@@ -40,10 +49,20 @@ export default function App() {
       },
     );
 
+    // Listen for Back Button (Hardware/Gesture)
+    const backListener = CapacitorApp.addListener("backButton", (data) => {
+      if (showSettings) {
+        setShowSettings(false);
+      }
+      // If we are on the main screen and no modals are open, the default behavior (exit) will happen
+      // unless we call data.canGoBack = false (but we want to allow exit from home)
+    });
+
     return () => {
       listener.then((l) => l.remove());
+      backListener.then((l) => l.remove());
     };
-  }, []);
+  }, [showSettings]);
 
   // 2. Auth & Security Bootstrap
   useEffect(() => {
@@ -54,6 +73,12 @@ export default function App() {
           key: "kakeibo_dark_mode",
         });
         setIsDarkMode(darkMode === "true");
+
+        // Load Display Scale
+        const { value: scale } = await Preferences.get({
+          key: "kakeibo_display_scale",
+        });
+        if (scale) setDisplayScale(parseFloat(scale));
 
         const token = await getAuthToken();
 
@@ -188,6 +213,17 @@ export default function App() {
     setIsPINEnabled(true);
   };
 
+  // Sync Dark Mode with Document Root
+  useEffect(() => {
+    if (isDarkMode !== null) {
+      if (isDarkMode) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  }, [isDarkMode]);
+
   const toggleDarkMode = async () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
@@ -200,7 +236,9 @@ export default function App() {
   // 1. Loading State
   if (isAuthenticated === null || isDarkMode === null) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#F5F5F7]">
+      <div
+        className={`fixed inset-0 flex items-center justify-center transition-colors duration-300 ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
+      >
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-4 border-t-[#007AFF] border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
           <p
@@ -237,6 +275,8 @@ export default function App() {
         userEmail={user?.email || "user@example.com"}
         isDarkMode={isDarkMode}
         onToggleDarkMode={toggleDarkMode}
+        displayScale={displayScale}
+        onSetDisplayScale={setDisplayScale}
       />
     );
   }
