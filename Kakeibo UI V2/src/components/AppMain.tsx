@@ -118,6 +118,9 @@ export function AppMain({
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [budgetLoading, setBudgetLoading] = useState(true);
   const [budget, setBudgetData] = useState<Budget | null>(null);
+  const [addExpenseDate, setAddExpenseDate] = useState<Date | undefined>(
+    undefined,
+  );
 
   const currentMonth = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -270,6 +273,12 @@ export function AppMain({
     setSelectedDate(date);
     setSelectedDayExpenses(dayExpenses);
     setIsDailyPopupOpen(true);
+  };
+
+  const handleAddExpenseFromCalendar = (date: Date) => {
+    setAddExpenseDate(date);
+    setIsDailyPopupOpen(false);
+    setIsAddModalOpen(true);
   };
 
   const handleEditExpense = (expense: UIExpense) => {
@@ -787,19 +796,6 @@ export function AppMain({
         </div>
       </motion.div>
 
-      {/* Modals */}
-      <AddExpenseModal
-        isOpen={isAddModalOpen}
-        onClose={async () => {
-          // Trigger Haptics
-          await Haptics.impact({ style: ImpactStyle.Light });
-
-          setIsAddModalOpen(false);
-        }}
-        onAdd={handleAddExpense}
-        isDarkMode={isDarkMode}
-      />
-
       {isCalendarOpen && (
         <CalendarView
           expenses={expenses}
@@ -812,6 +808,7 @@ export function AppMain({
       <DailyExpensePopup
         isOpen={isDailyPopupOpen}
         onClose={() => setIsDailyPopupOpen(false)}
+        onAddExpense={handleAddExpenseFromCalendar}
         date={selectedDate}
         expenses={selectedDayExpenses}
         isDarkMode={isDarkMode}
@@ -831,22 +828,6 @@ export function AppMain({
         <AnalyticsView
           expenses={expenses}
           onClose={() => setIsAnalyticsOpen(false)}
-          isDarkMode={isDarkMode}
-        />
-      )}
-
-      {isEditModalOpen && editingExpense && (
-        <EditExpenseModal
-          isOpen={isEditModalOpen}
-          onClose={async () => {
-            // Trigger Haptics
-            await Haptics.impact({ style: ImpactStyle.Light });
-
-            setIsEditModalOpen(false);
-          }}
-          expense={editingExpense}
-          onSave={handleSaveEdit}
-          onDelete={handleDeleteExpense}
           isDarkMode={isDarkMode}
         />
       )}
@@ -910,6 +891,37 @@ export function AppMain({
       {isHelpOpen && (
         <HelpView
           onClose={() => setIsHelpOpen(false)}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+      {/* Primary Modals (should be on top) */}
+      <AddExpenseModal
+        isOpen={isAddModalOpen}
+        onClose={async () => {
+          // Trigger Haptics
+          await Haptics.impact({ style: ImpactStyle.Light });
+
+          setIsAddModalOpen(false);
+          setAddExpenseDate(undefined);
+        }}
+        onAdd={handleAddExpense}
+        isDarkMode={isDarkMode}
+        initialDate={addExpenseDate}
+      />
+
+      {isEditModalOpen && editingExpense && (
+        <EditExpenseModal
+          isOpen={isEditModalOpen}
+          onClose={async () => {
+            // Trigger Haptics
+            await Haptics.impact({ style: ImpactStyle.Light });
+
+            setIsEditModalOpen(false);
+          }}
+          expense={editingExpense}
+          onSave={handleSaveEdit}
+          onDelete={handleDeleteExpense}
           isDarkMode={isDarkMode}
         />
       )}

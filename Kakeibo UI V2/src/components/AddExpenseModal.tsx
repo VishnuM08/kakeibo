@@ -20,6 +20,7 @@ interface AddExpenseModalProps {
     expenseDateTime: string;
   }) => void;
   isDarkMode?: boolean;
+  initialDate?: Date;
 }
 
 const categories = [
@@ -72,6 +73,7 @@ export function AddExpenseModal({
   onClose,
   onAdd,
   isDarkMode = false,
+  initialDate,
 }: AddExpenseModalProps) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -91,14 +93,18 @@ export function AddExpenseModal({
       return;
     }
 
-    // Create a date object for today at the current time
+    // Create a date object for the expense
+    const expenseDate = new Date(initialDate || new Date());
+    // If it's a past date, we might want to keep the current time or set a default one
+    // For now, let's keep the current time even for past dates to maintain high resolution
     const now = new Date();
+    expenseDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
     onAdd({
       description: description.trim(),
       category,
       amount: numAmount,
-      expenseDateTime: now.toISOString(),
+      expenseDateTime: expenseDate.toISOString(),
     });
 
     // Reset form
@@ -255,7 +261,7 @@ export function AddExpenseModal({
             </div>
           </div>
 
-          {/* Date Display (Today) */}
+          {/* Date Display */}
           <div
             className={`rounded-[12px] px-4 py-3 ${isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"}`}
           >
@@ -266,7 +272,14 @@ export function AddExpenseModal({
               <span
                 className={`font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
               >
-                Today
+                {initialDate
+                  ? initialDate.toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : "Today"}
               </span>
             </p>
           </div>
