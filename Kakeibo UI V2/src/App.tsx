@@ -8,11 +8,30 @@ import { Toaster } from "./utils/toast";
 import { getMe, getAuthToken, removeAuthToken } from "./services/api";
 import { Preferences } from "@capacitor/preferences";
 import { App as CapacitorApp } from "@capacitor/app";
+import { registerPlugin } from "@capacitor/core";
 
 /**
  * App Wrapper Component
  * Handles Authentication, PIN Lock, and Lifecycle
  */
+
+export interface SmsExpensePayload {
+  amount: number;
+  description: string;
+  expenseDateTime: string;
+  source: "SMS_AUTO";
+  referenceId?: string;
+}
+
+/* ===============================
+   REGISTER PLUGIN (ONCE)
+================================ */
+const SmsReader = registerPlugin<{
+  addListener(
+    eventName: "onSmsExpenseDetected",
+    listenerFunc: (data: SmsExpensePayload) => void,
+  ): Promise<{ remove: () => void }>;
+}>("SmsReader");
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -22,6 +41,41 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean | null>(null);
   const [user, setUser] = useState<any>(null);
   const [displayScale, setDisplayScale] = useState(1.0);
+  const [pendingSmsExpense, setPendingSmsExpense] =
+    useState<SmsExpensePayload | null>(null);
+
+  // ===============================
+  // SMS AUTO-DETECT LISTENER (GLOBAL)
+  // ===============================
+  // Capacitor Plugin Registration
+  useEffect(() => {
+    const setupListener = async () => {
+      const listener = await SmsReader.addListener(
+        "onSmsExpenseDetected",
+        (data: SmsExpensePayload) => {
+          const payload = data as SmsExpensePayload;
+
+          console.log(
+            "📩 SMS EVENT RECEIVED IN REACT:",
+            JSON.stringify(payload, null, 2),
+          );
+
+          // Store it for later UI use
+          setPendingSmsExpense(payload);
+        },
+      );
+
+      return listener;
+    };
+
+    let cleanup: { remove: () => void } | null = null;
+
+    setupListener().then((l) => (cleanup = l));
+
+    return () => {
+      cleanup?.remove();
+    };
+  }, []);
 
   // Apply Display Scale to root
   useEffect(() => {
@@ -288,6 +342,8 @@ export default function App() {
         isDarkMode={isDarkMode}
         onToggleDarkMode={toggleDarkMode}
         onOpenSettings={() => setShowSettings(true)}
+        pendingSmsExpense={pendingSmsExpense}
+        onConsumeSmsExpense={() => setPendingSmsExpense(null)}
       />
     </ErrorBoundary>
   );

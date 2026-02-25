@@ -57,6 +57,8 @@ import {
   mapApiExpenseToUI,
   mapUIToBackendExpense,
 } from "../utils/expenseMapper";
+import { SmsExpensePayload } from "../App";
+import { extractAmountFromSms } from "../utils/smsAmountParser";
 
 /**
  * Main App Component
@@ -87,15 +89,24 @@ const getCategoryColor = (category: string) => {
   return colors[category.toLowerCase()] || "from-[#b2bec3] to-[#636e72]";
 };
 
+interface AppMainProps {
+  isDarkMode: boolean;
+  onToggleDarkMode: () => void;
+  onOpenSettings: () => void;
+
+  // SMS auto-detect
+  pendingSmsExpense: SmsExpensePayload | null;
+  onConsumeSmsExpense: () => void;
+}
+
 export function AppMain({
-  isDarkMode = false,
+  isDarkMode,
   onToggleDarkMode,
   onOpenSettings,
-}: {
-  isDarkMode?: boolean;
-  onToggleDarkMode?: () => void;
-  onOpenSettings?: () => void;
-}) {
+  pendingSmsExpense,
+  onConsumeSmsExpense,
+}: AppMainProps) {
+  const [smsPrefill, setSmsPrefill] = useState<SmsExpensePayload | null>(null);
   const [expenses, setExpenses] = useState<UIExpense[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -121,6 +132,29 @@ export function AppMain({
   const [addExpenseDate, setAddExpenseDate] = useState<Date | undefined>(
     undefined,
   );
+
+  useEffect(() => {
+    console.log("🧩 AppMain received pendingSmsExpense:", pendingSmsExpense);
+  }, [pendingSmsExpense]);
+
+  useEffect(() => {
+    if (pendingSmsExpense) {
+      console.log("🚪 STEP 3: Triggering AddExpenseModal");
+
+      const extractedAmount =
+        pendingSmsExpense.amount > 0
+          ? pendingSmsExpense.amount
+          : extractAmountFromSms(pendingSmsExpense.description);
+
+      setSmsPrefill({
+        ...pendingSmsExpense,
+        amount: extractedAmount ?? 0,
+      });
+
+      setIsAddModalOpen(true);
+      onConsumeSmsExpense();
+    }
+  }, [pendingSmsExpense]);
 
   const currentMonth = new Date().toLocaleDateString("en-US", {
     month: "long",

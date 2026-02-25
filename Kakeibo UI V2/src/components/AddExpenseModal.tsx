@@ -8,7 +8,8 @@ import {
   Zap,
   MoreHorizontal,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { SmsExpensePayload } from "../App";
 
 interface AddExpenseModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface AddExpenseModalProps {
   }) => void;
   isDarkMode?: boolean;
   initialDate?: Date;
+  smsPrefill?: SmsExpensePayload | null;
 }
 
 const categories = [
@@ -74,10 +76,26 @@ export function AddExpenseModal({
   onAdd,
   isDarkMode = false,
   initialDate,
+  smsPrefill,
 }: AddExpenseModalProps) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
+
+  useEffect(() => {
+    if (isOpen && smsPrefill) {
+      console.log("✍️ Prefilling AddExpenseModal from SMS:", smsPrefill);
+
+      setDescription(smsPrefill.description || "");
+      setAmount(
+        smsPrefill.amount && smsPrefill.amount > 0
+          ? smsPrefill.amount.toString()
+          : "",
+      );
+
+      // Category intentionally NOT auto-set (user choice)
+    }
+  }, [isOpen, smsPrefill]);
 
   if (!isOpen) return null;
 
@@ -116,8 +134,15 @@ export function AddExpenseModal({
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onClose();
+      handleClose();
     }
+  };
+
+  const handleClose = () => {
+    setDescription("");
+    setCategory("");
+    setAmount("");
+    onClose();
   };
 
   return (
@@ -138,7 +163,7 @@ export function AddExpenseModal({
             Add Expense
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
               isDarkMode
                 ? "bg-[#2c2c2e] hover:bg-[#3c3c3e]"
@@ -153,6 +178,12 @@ export function AddExpenseModal({
         </div>
 
         {/* Form */}
+
+        {smsPrefill && (
+          <div className="mb-2 text-xs text-green-600 font-semibold">
+            Detected from SMS
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Expense Description */}
           <div>
