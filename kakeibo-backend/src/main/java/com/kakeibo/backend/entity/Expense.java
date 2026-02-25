@@ -41,4 +41,8 @@ public class Expense {
     void onCreate() {
         this.createdAt = Instant.now();
     }
+
+    // ✅ NEW
+    private String source;       // MANUAL / SMS_AUTO
+    private String referenceId;  // nullable
 }

@@ -19,6 +19,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
 
     void deleteById(UUID id);
 
+    boolean existsByReferenceId(String referenceId);
+
 
 }
 

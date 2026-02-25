@@ -22,4 +22,10 @@ public class UpdateExpenseRequest {
 
     @NotNull
     private Instant expenseDateTime;
+
+
+    // ✅ NEW
+    private String source;       // MANUAL / SMS_AUTO
+    private String referenceId;  // nullable
+
 }

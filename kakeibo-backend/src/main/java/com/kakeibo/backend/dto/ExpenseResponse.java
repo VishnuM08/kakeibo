@@ -9,9 +9,13 @@ import java.util.UUID;
 @Getter
 @AllArgsConstructor
 public class ExpenseResponse {
+
     private UUID id;
     private Double amount;
     private String description;
     private String category;
     private Instant expenseDateTime;
+
+    private String source;
+    private boolean duplicate;
 }

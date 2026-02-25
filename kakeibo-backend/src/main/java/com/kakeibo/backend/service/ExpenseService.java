@@ -34,6 +34,22 @@ public class ExpenseService {
     ) {
         User user = userDetails.getUser();
 
+        // ✅ Handle duplicate SMS
+        if ("SMS_AUTO".equals(req.getSource())
+                && req.getReferenceId() != null
+                && expenseRepository.existsByReferenceId(req.getReferenceId())) {
+
+            return new ExpenseResponse(
+                    null,
+                    req.getAmount(),
+                    req.getDescription(),
+                    req.getCategory(),
+                    req.getExpenseDateTime(),
+                    "SMS_AUTO",
+                    true   // 🔴 duplicate
+            );
+        }
+
         Expense expense = new Expense();
         expense.setUser(user);
         expense.setAmount(req.getAmount());
@@ -45,12 +61,27 @@ public class ExpenseService {
                         : Instant.now()
         );
 
+        expense.setSource(
+                req.getSource() != null ? req.getSource() : "MANUAL"
+        );
+
+        // ✅ VERY IMPORTANT
+        expense.setReferenceId(req.getReferenceId());
+
         Expense saved = expenseRepository.save(expense);
 
-        // 🔥 Reduce budget
+        // 🔥 Reduce budget only for real save
         budgetService.reduceBudget(user, req.getAmount());
 
-        return toResponse(saved);
+        return new ExpenseResponse(
+                saved.getId(),
+                saved.getAmount(),
+                saved.getDescription(),
+                saved.getCategory(),
+                saved.getExpenseDateTime(),
+                saved.getSource(),
+                false   // not duplicate
+        );
     }
 
 
@@ -91,6 +122,7 @@ public class ExpenseService {
         expense.setDescription(req.getDescription());
         expense.setExpenseDateTime(req.getExpenseDateTime());
 
+
         Expense saved = expenseRepository.save(expense);
 
         // 🔥 Adjust budget delta
@@ -128,7 +160,9 @@ public class ExpenseService {
                 expense.getAmount(),
                 expense.getDescription(),
                 expense.getCategory(),
-                expense.getExpenseDateTime()
+                expense.getExpenseDateTime(),
+                expense.getSource(),
+                false
         );
     }
 
