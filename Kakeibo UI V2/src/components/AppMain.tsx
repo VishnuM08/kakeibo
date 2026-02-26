@@ -930,7 +930,7 @@ export function AppMain({
       )}
 
       {/* Primary Modals (should be on top) */}
-      <AddExpenseModal
+      {/* <AddExpenseModal
         isOpen={isAddModalOpen}
         onClose={async () => {
           // Trigger Haptics
@@ -942,8 +942,21 @@ export function AppMain({
         onAdd={handleAddExpense}
         isDarkMode={isDarkMode}
         initialDate={addExpenseDate}
-      />
+      /> */}
 
+      <AddExpenseModal
+        isOpen={isAddModalOpen}
+        onClose={async () => {
+          await Haptics.impact({ style: ImpactStyle.Light });
+          setIsAddModalOpen(false);
+          setAddExpenseDate(undefined);
+          setSmsPrefill(null); // cleanup
+        }}
+        onAdd={handleAddExpense}
+        isDarkMode={isDarkMode}
+        initialDate={addExpenseDate}
+        smsPrefill={smsPrefill} // 🔥 THIS LINE WAS MISSING
+      />
       {isEditModalOpen && editingExpense && (
         <EditExpenseModal
           isOpen={isEditModalOpen}

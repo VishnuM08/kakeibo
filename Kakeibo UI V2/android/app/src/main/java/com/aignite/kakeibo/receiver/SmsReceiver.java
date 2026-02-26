@@ -12,9 +12,27 @@ import com.aignite.kakeibo.plugins.SmsReaderPlugin;
 import com.getcapacitor.JSObject;
 
 import java.time.Instant;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SmsReceiver extends BroadcastReceiver {
 
+    private double extractAmount(String message) {
+        try {
+            Pattern pattern = Pattern.compile(
+                    "(?i)(rs\\.?|inr|₹)\\s*([0-9,]+(\\.[0-9]{1,2})?)"
+            );
+            Matcher matcher = pattern.matcher(message);
+
+            if (matcher.find()) {
+                String amountStr = matcher.group(2).replace(",", "");
+                return Double.parseDouble(amountStr);
+            }
+        } catch (Exception e) {
+            Log.e("KAKEIBO_UPI", "Amount parse failed", e);
+        }
+        return 0;
+    }
     private boolean isUpiDebitSms(String message) {
         String msg = message.toLowerCase();
 
@@ -41,9 +59,18 @@ public class SmsReceiver extends BroadcastReceiver {
                 if (isUpiDebitSms(messageBody)) {
                     Log.d("KAKEIBO_UPI", "UPI SMS detected: " + messageBody);
 
-                    JSObject data = new JSObject();
+                    /*JSObject data = new JSObject();
                     data.put("amount", 0); // TEMP
+                    data.put("description", messageBody);*/
+
+                    double amount = extractAmount(messageBody);
+
+                    Log.d("KAKEIBO_UPI", "Extracted amount: " + amount);
+
+                    JSObject data = new JSObject();
+                    data.put("amount", amount);
                     data.put("description", messageBody);
+
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         data.put("expenseDateTime", Instant.now().toString());
                     }

@@ -83,6 +83,10 @@ export function AddExpenseModal({
   const [amount, setAmount] = useState("");
 
   useEffect(() => {
+    console.log("📥 Modal received smsPrefill:", smsPrefill);
+  }, [smsPrefill]);
+
+  useEffect(() => {
     if (isOpen && smsPrefill) {
       console.log("✍️ Prefilling AddExpenseModal from SMS:", smsPrefill);
 
