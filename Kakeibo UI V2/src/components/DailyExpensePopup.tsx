@@ -87,13 +87,13 @@ export function DailyExpensePopup({
       onClick={handleOverlayClick}
     >
       <div
-        className={`rounded-t-[28px] sm:rounded-[28px] w-full max-w-lg max-h-[80vh] overflow-hidden animate-slide-up ${
+        className={`rounded-t-[28px] sm:rounded-[28px] w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden animate-slide-up ${
           isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
         }`}
       >
         {/* Header */}
         <div
-          className={`p-6 border-b ${isDarkMode ? "border-white/10" : "border-black/5"}`}
+          className={`shrink-0 p-6 border-b ${isDarkMode ? "border-white/10" : "border-black/5"}`}
         >
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -162,7 +162,7 @@ export function DailyExpensePopup({
         </div>
 
         {/* Expenses List */}
-        <div className="overflow-y-auto max-h-[50vh] p-6">
+        <div className="overflow-y-auto flex-1 p-6 pb-[env(safe-area-inset-bottom,48px)] sm:pb-12">
           {expenses.length > 0 ? (
             <div className="space-y-3">
               {expenses.map((expense, index) => {

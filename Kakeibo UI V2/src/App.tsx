@@ -21,16 +21,19 @@ export interface SmsExpensePayload {
   expenseDateTime: string;
   source: "SMS_AUTO";
   referenceId?: string;
+  category?: string;
 }
 
 /* ===============================
    REGISTER PLUGIN (ONCE)
 ================================ */
-const SmsReader = registerPlugin<{
+export const SmsReader = registerPlugin<{
   addListener(
     eventName: "onSmsExpenseDetected",
     listenerFunc: (data: SmsExpensePayload) => void,
   ): Promise<{ remove: () => void }>;
+  getPendingExpenses(): Promise<{ expenses: SmsExpensePayload[] }>;
+  clearPendingExpenses(): Promise<void>;
 }>("SmsReader");
 
 export default function App() {

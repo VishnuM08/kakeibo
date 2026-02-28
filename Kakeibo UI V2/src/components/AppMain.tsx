@@ -5,6 +5,7 @@ import {
   HelpCircle,
   Moon,
   Plus,
+  RefreshCw,
   Repeat,
   Search,
   Settings,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { message } from "antd";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import {
   Budget,
@@ -57,9 +59,9 @@ import {
   mapApiExpenseToUI,
   mapUIToBackendExpense,
 } from "../utils/expenseMapper";
-import { SmsExpensePayload } from "../App";
+import { SmsExpensePayload, SmsReader } from "../App";
+import { PendingSmsModal } from "./PendingSmsModal";
 import { extractAmountFromSms } from "../utils/smsAmountParser";
-
 /**
  * Main App Component
  *
@@ -76,6 +78,7 @@ import { extractAmountFromSms } from "../utils/smsAmountParser";
  * - Auto-sync when connection restored
  * - User sees instant feedback, no loading states
  */
+
 const getCategoryColor = (category: string) => {
   const colors: { [key: string]: string } = {
     food: "from-[#ff6b6b] to-[#ee5a6f]",
@@ -132,6 +135,8 @@ export function AppMain({
   const [addExpenseDate, setAddExpenseDate] = useState<Date | undefined>(
     undefined,
   );
+  const [pendingSmsList, setPendingSmsList] = useState<SmsExpensePayload[]>([]);
+  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
 
   useEffect(() => {
     console.log("🧩 AppMain received pendingSmsExpense:", pendingSmsExpense);
@@ -139,22 +144,39 @@ export function AppMain({
 
   useEffect(() => {
     if (pendingSmsExpense) {
-      console.log("🚪 STEP 3: Triggering AddExpenseModal");
+      console.log("📩 SMS Detected while app open, appending to review list");
 
       const extractedAmount =
         pendingSmsExpense.amount > 0
           ? pendingSmsExpense.amount
           : extractAmountFromSms(pendingSmsExpense.description);
 
-      setSmsPrefill({
+      const newExpense: SmsExpensePayload = {
         ...pendingSmsExpense,
         amount: extractedAmount ?? 0,
-      });
+      };
 
-      setIsAddModalOpen(true);
+      setPendingSmsList((prev) => [...prev, newExpense]);
+      setIsPendingModalOpen(true);
       onConsumeSmsExpense();
     }
   }, [pendingSmsExpense]);
+
+  // Check for pending SMS on mount (Bulk Review)
+  useEffect(() => {
+    (async () => {
+      try {
+        const { expenses } = await SmsReader.getPendingExpenses();
+        if (expenses && expenses.length > 0) {
+          console.log("📡 Found pending SMS transactions:", expenses.length);
+          setPendingSmsList(expenses);
+          setIsPendingModalOpen(true);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch pending SMS:", err);
+      }
+    })();
+  }, []);
 
   const currentMonth = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -212,15 +234,15 @@ export function AppMain({
     }
   };
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  // Get today's date safely in LOCAL time, avoiding the UTC timezone shift
+  const todayObj = new Date();
+  const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, "0")}-${String(todayObj.getDate()).padStart(2, "0")}`;
 
   const todaysExpenses = expenses.filter((exp) => {
     if (!exp.date) return false;
-
-    const expDateObj = new Date(exp.date);
-    if (isNaN(expDateObj.getTime())) return false;
-
-    return expDateObj.toISOString().split("T")[0] === todayStr;
+    // Because mapApiExpenseToUI handles creating YYYY-MM-DD in local time
+    // we can safely rely on a direct string match instead of re-parsing dates.
+    return exp.date === todayStr;
   });
 
   const todayTotal = todaysExpenses.reduce(
@@ -233,11 +255,13 @@ export function AppMain({
   const currentYear = new Date().getFullYear();
   const monthTotal = expenses
     .filter((exp) => {
-      const expDate = new Date(exp.date);
-      return (
-        expDate.getMonth() === currentMonthNum &&
-        expDate.getFullYear() === currentYear
-      );
+      if (!exp.date) return false;
+      const parts = exp.date.split("-");
+      if (parts.length < 2) return false;
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // 0-indexed
+
+      return month === currentMonthNum && year === currentYear;
     })
     .reduce((sum, exp) => sum + exp.amount, 0);
   const handleAddExpense = async (newExpense: {
@@ -248,6 +272,11 @@ export function AppMain({
   }) => {
     const tempId = `temp-${Date.now()}`;
 
+    const optDateObj = new Date(newExpense.expenseDateTime);
+    const localDateStr = `${optDateObj.getFullYear()}-${String(
+      optDateObj.getMonth() + 1,
+    ).padStart(2, "0")}-${String(optDateObj.getDate()).padStart(2, "0")}`;
+
     const optimisticExpense: UIExpense = {
       id: tempId,
       description: newExpense.description,
@@ -255,8 +284,8 @@ export function AppMain({
       amount: newExpense.amount,
 
       dateTime: newExpense.expenseDateTime,
-      date: newExpense.expenseDateTime.split("T")[0],
-      time: new Date(newExpense.expenseDateTime).toLocaleTimeString("en-US", {
+      date: localDateStr,
+      time: optDateObj.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
@@ -694,6 +723,43 @@ export function AppMain({
             <Search className="w-4 h-4" strokeWidth={2.5} />
             <span>Search</span>
           </motion.button>
+          <motion.button
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            onClick={async () => {
+              try {
+                // Fetch the latest pending from native storage
+                const { expenses } = await SmsReader.getPendingExpenses();
+                if (expenses && expenses.length > 0) {
+                  setPendingSmsList(expenses);
+                }
+                setIsPendingModalOpen(true);
+              } catch (err) {
+                console.warn("Failed to fetch pending SMS manually:", err);
+                setIsPendingModalOpen(true); // Open anyway to show what's in local state
+              }
+            }}
+            className={`col-span-2 py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
+              isDarkMode
+                ? "bg-[#1c1c1e]/90 hover:bg-[#2c2c2e]/90 text-[#0a84ff] border-white/10"
+                : "bg-white/80 hover:bg-white/90 text-[#007aff] border-black/5"
+            }`}
+          >
+            <RefreshCw className="w-4 h-4" strokeWidth={2.5} />
+            {pendingSmsList.length > 0 ? (
+              <div className="relative flex items-center gap-2">
+                <span>Pending SMS ({pendingSmsList.length})</span>
+                <span className="absolute -top-1 -right-3 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+              </div>
+            ) : (
+              <span>Sync SMS</span>
+            )}
+          </motion.button>
         </motion.div>
 
         {/* Today's Expenses Section */}
@@ -957,6 +1023,7 @@ export function AppMain({
         initialDate={addExpenseDate}
         smsPrefill={smsPrefill} // 🔥 THIS LINE WAS MISSING
       />
+
       {isEditModalOpen && editingExpense && (
         <EditExpenseModal
           isOpen={isEditModalOpen}
@@ -972,6 +1039,99 @@ export function AppMain({
           isDarkMode={isDarkMode}
         />
       )}
+      <PendingSmsModal
+        isOpen={isPendingModalOpen}
+        onClose={() => setIsPendingModalOpen(false)}
+        pendingExpenses={pendingSmsList}
+        isDarkMode={isDarkMode}
+        onSync={async (selectedItems) => {
+          let successCount = 0;
+          let failCount = 0;
+          const successfullySyncedIds = new Set<string>();
+
+          // 1. Iterate over parsed SMS expenses and use single POST requests
+          for (const item of selectedItems) {
+            try {
+              const id =
+                item.referenceId ||
+                `sms-${item.expenseDateTime}-${item.amount}`;
+
+              // Attach idempotency external key in notes
+              await createExpense({
+                description: item.description,
+                category: item.category || "other",
+                amount: item.amount,
+                expenseDateTime: item.expenseDateTime,
+                notes: `Source: Auto-Sync [${id}]`,
+              });
+
+              successfullySyncedIds.add(id);
+              successCount++;
+            } catch (err) {
+              console.error(
+                "Failed to sync individual SMS transaction:",
+                item,
+                err,
+              );
+              failCount++;
+            }
+          }
+
+          // 2. Update React state (remove only the successful items)
+          if (successCount > 0) {
+            setPendingSmsList((prev) => {
+              const remaining = prev.filter((item) => {
+                const id =
+                  item.referenceId ||
+                  `sms-${item.expenseDateTime}-${item.amount}`;
+                return !successfullySyncedIds.has(id);
+              });
+
+              // 3. Clear native storage ONLY if all pending items are now resolved
+              // (Native plugin only supports clearing all at once)
+              if (remaining.length === 0) {
+                SmsReader.clearPendingExpenses().catch((err) =>
+                  console.error("Failed to clear native storage:", err),
+                );
+              }
+
+              return remaining;
+            });
+
+            // Refresh expenses list
+            try {
+              const apiExpenses = await getExpenses();
+              if (Array.isArray(apiExpenses)) {
+                const mapped = apiExpenses.map((e) =>
+                  mapApiExpenseToUI(e as any),
+                );
+                setExpenses(mapped);
+              }
+            } catch (err) {
+              console.warn("Failed to refresh expenses list:", err);
+            }
+          }
+
+          // Close modal if no items left selected to process
+          if (pendingSmsList.length <= successCount) {
+            setIsPendingModalOpen(false);
+          }
+
+          if (failCount > 0 && successCount > 0) {
+            message.warning(
+              `Synced ${successCount} transactions. ${failCount} failed and will remain pending.`,
+            );
+            throw new Error("Partial sync failure"); // Keeps modal loading state/open for the failed ones
+          } else if (failCount > 0 && successCount === 0) {
+            message.error(
+              "Failed to sync transactions. Data preserved in native storage.",
+            );
+            throw new Error("Full sync failure");
+          } else {
+            message.success(`Successfully synced ${successCount} transactions`);
+          }
+        }}
+      />
     </div>
   );
 }
