@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Lock, Mail, User, Eye, EyeOff } from "lucide-react";
-import { login, register, setAuthToken } from "../services/api";
+import { login, register, setAuthToken, forgotPassword } from "../services/api";
 import { Preferences } from "@capacitor/preferences";
 
 /**
@@ -30,6 +30,8 @@ export function AuthScreen({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +39,18 @@ export function AuthScreen({
     setIsLoading(true);
 
     try {
+      if (isForgotPassword) {
+        if (!email.trim()) {
+          setError("Please enter your email");
+          setIsLoading(false);
+          return;
+        }
+        await forgotPassword(email);
+        setResetSent(true);
+        setIsLoading(false);
+        return;
+      }
+
       if (isLogin) {
         // TODO: BACKEND INTEGRATION - Call login API
         const response = await login({ email, password });
@@ -132,45 +146,60 @@ export function AuthScreen({
             isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
           }`}
         >
-          <div className="flex gap-2 mb-8">
-            <button
-              onClick={() => {
-                setIsLogin(true);
-                setError("");
-              }}
-              className={`flex-1 py-3 rounded-[12px] font-semibold text-[17px] transition-all ${
-                isLogin
-                  ? isDarkMode
-                    ? "bg-white text-black"
-                    : "bg-black text-white"
-                  : isDarkMode
-                    ? "bg-[#2c2c2e] text-white/50"
-                    : "bg-[#f5f5f7] text-black/50"
-              }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => {
-                setIsLogin(false);
-                setError("");
-              }}
-              className={`flex-1 py-3 rounded-[12px] font-semibold text-[17px] transition-all ${
-                !isLogin
-                  ? isDarkMode
-                    ? "bg-white text-black"
-                    : "bg-black text-white"
-                  : isDarkMode
-                    ? "bg-[#2c2c2e] text-white/50"
-                    : "bg-[#f5f5f7] text-black/50"
-              }`}
-            >
-              Register
-            </button>
-          </div>
+          {!isForgotPassword ? (
+            <div className="flex gap-2 mb-8">
+              <button
+                onClick={() => {
+                  setIsLogin(true);
+                  setError("");
+                }}
+                className={`flex-1 py-3 rounded-[12px] font-semibold text-[17px] transition-all ${
+                  isLogin
+                    ? isDarkMode
+                      ? "bg-white text-black"
+                      : "bg-black text-white"
+                    : isDarkMode
+                      ? "bg-[#2c2c2e] text-white/50"
+                      : "bg-[#f5f5f7] text-black/50"
+                }`}
+              >
+                Login
+              </button>
+              <button
+                onClick={() => {
+                  setIsLogin(false);
+                  setError("");
+                }}
+                className={`flex-1 py-3 rounded-[12px] font-semibold text-[17px] transition-all ${
+                  !isLogin
+                    ? isDarkMode
+                      ? "bg-white text-black"
+                      : "bg-black text-white"
+                    : isDarkMode
+                      ? "bg-[#2c2c2e] text-white/50"
+                      : "bg-[#f5f5f7] text-black/50"
+                }`}
+              >
+                Register
+              </button>
+            </div>
+          ) : (
+            <div className="mb-8 text-center">
+              <h2
+                className={`text-[22px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
+              >
+                Reset Password
+              </h2>
+              <p
+                className={`mt-2 text-[15px] ${isDarkMode ? "text-white/60" : "text-black/60"}`}
+              >
+                Enter your email address to receive a password reset link.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {!isLogin && !isForgotPassword && (
               <div>
                 <label
                   className={`block text-[15px] font-semibold mb-2 ${
@@ -230,61 +259,92 @@ export function AuthScreen({
               </div>
             </div>
 
-            <div>
-              <label
-                className={`block text-[15px] font-semibold mb-2 ${
-                  isDarkMode ? "text-white" : "text-black"
-                }`}
-              >
-                Password
-              </label>
-              <div className="relative">
-                <Lock
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${
-                    isDarkMode ? "text-white/40" : "text-black/40"
+            {!isForgotPassword && (
+              <div>
+                <label
+                  className={`block text-[15px] font-semibold mb-2 ${
+                    isDarkMode ? "text-white" : "text-black"
                   }`}
-                />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className={`w-full pl-12 pr-12 py-3.5 rounded-[12px] text-[17px] focus:outline-none focus:ring-2 ${
-                    isDarkMode
-                      ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
-                      : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
-                  }`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2"
                 >
-                  {showPassword ? (
-                    <EyeOff
-                      className={`w-5 h-5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}
-                    />
-                  ) : (
-                    <Eye
-                      className={`w-5 h-5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}
-                    />
-                  )}
-                </button>
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock
+                    className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${
+                      isDarkMode ? "text-white/40" : "text-black/40"
+                    }`}
+                  />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className={`w-full pl-12 pr-12 py-3.5 rounded-[12px] text-[17px] focus:outline-none focus:ring-2 ${
+                      isDarkMode
+                        ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
+                        : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
+                    }`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2"
+                  >
+                    {showPassword ? (
+                      <EyeOff
+                        className={`w-5 h-5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                      />
+                    ) : (
+                      <Eye
+                        className={`w-5 h-5 ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                      />
+                    )}
+                  </button>
+                </div>
+                {isLogin && (
+                  <div className="text-right mt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsForgotPassword(true);
+                        setError("");
+                        setResetSent(false);
+                      }}
+                      className="text-[#007aff] text-[14px] font-semibold hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
 
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-[12px] p-4">
                 <p className="text-red-500 text-[15px] font-medium">{error}</p>
               </div>
             )}
+            {resetSent && isForgotPassword && (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-[12px] p-4 text-center">
+                <p className="text-green-500 text-[15px] font-medium mb-1">
+                  Reset link sent!
+                </p>
+                <p
+                  className={`text-[13px] ${isDarkMode ? "text-white/70" : "text-black/70"}`}
+                >
+                  Please check your email for the reset instructions.
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (resetSent && isForgotPassword)}
               className={`w-full py-[15px] px-6 rounded-[14px] transition-all duration-150 font-semibold text-[17px] active:scale-[0.97] ${
-                isLoading ? "opacity-50 cursor-not-allowed" : ""
+                isLoading || (resetSent && isForgotPassword)
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               } ${
                 isDarkMode
                   ? "bg-white hover:bg-white/90 text-black"
@@ -293,11 +353,29 @@ export function AuthScreen({
             >
               {isLoading
                 ? "Please wait..."
-                : isLogin
-                  ? "Login"
-                  : "Create Account"}
+                : isForgotPassword
+                  ? "Send Reset Link"
+                  : isLogin
+                    ? "Login"
+                    : "Create Account"}
             </button>
           </form>
+
+          {isForgotPassword && (
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  setError("");
+                  setResetSent(false);
+                }}
+                className={`text-[15px] font-medium transition-colors ${isDarkMode ? "text-white/70 hover:text-white" : "text-black/70 hover:text-black"}`}
+              >
+                Back to Login
+              </button>
+            </div>
+          )}
 
           {/* Demo Credentials
           <div className={`mt-6 p-4 rounded-[12px] text-center ${

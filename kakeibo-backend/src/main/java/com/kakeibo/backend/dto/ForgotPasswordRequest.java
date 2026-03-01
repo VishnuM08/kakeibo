@@ -1,4 +1,3 @@
 package com.kakeibo.backend.dto;
 
-public record ForgetPasswordRequest() {
-}
+public record ForgotPasswordRequest(String email) {}

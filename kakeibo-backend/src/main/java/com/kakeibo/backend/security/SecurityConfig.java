@@ -20,6 +20,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
+    private final RateLimitFilter rateLimitFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -47,7 +48,8 @@ public class SecurityConfig {
                                 // ✅ Error endpoint (CRITICAL)
                                 "/error",
 
-                                "/test/**"
+                                "/test/**",
+                                "/test-mail"
                         ).permitAll()
 
 
@@ -61,11 +63,16 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(
+                rateLimitFilter,
+                UsernamePasswordAuthenticationFilter.class)
 
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 );
+
+
 
         return http.build();
     }

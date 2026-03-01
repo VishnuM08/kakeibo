@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppMain } from "./components/AppMain";
 import { AuthScreen } from "./components/AuthScreen";
+import { ResetPasswordScreen } from "./components/ResetPasswordScreen";
 import { PINLockScreen } from "./components/PINLockScreen";
 import { SettingsView } from "./components/SettingsView";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -44,6 +45,7 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean | null>(null);
   const [user, setUser] = useState<any>(null);
   const [displayScale, setDisplayScale] = useState(1.0);
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const [pendingSmsExpense, setPendingSmsExpense] =
     useState<SmsExpensePayload | null>(null);
 
@@ -78,6 +80,17 @@ export default function App() {
     return () => {
       cleanup?.remove();
     };
+  }, []);
+
+  // Deep Link / Routing (Reset Password)
+  useEffect(() => {
+    const path = window.location.pathname;
+    const searchParams = new URLSearchParams(window.location.search);
+    const token = searchParams.get("token");
+
+    if (path === "/reset-password") {
+      setResetToken(token || "");
+    }
   }, []);
 
   // Apply Display Scale to root
@@ -305,6 +318,21 @@ export default function App() {
           </p>
         </div>
       </div>
+    );
+  }
+
+  // 1.5. Password Reset Flow
+  if (resetToken !== null) {
+    return (
+      <ResetPasswordScreen
+        token={resetToken}
+        isDarkMode={isDarkMode ?? false}
+        onResetSuccess={() => {
+          setResetToken(null);
+          // Clear URL so refreshing doesn't show it again
+          window.history.replaceState({}, document.title, "/");
+        }}
+      />
     );
   }
 

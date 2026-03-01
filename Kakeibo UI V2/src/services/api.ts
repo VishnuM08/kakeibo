@@ -131,8 +131,8 @@ import { Capacitor } from "@capacitor/core";
 // When running in a browser (web), use the /api proxy to avoid CORS issues.
 // When running on native devices, use the full URL.
 const isNative = Capacitor.isNativePlatform();
-const baseURL = isNative ? "https://api.kakeibo.theaignite.app" : "/api";
-
+const baseURL = isNative ? import.meta.env.VITE_API_KEY : "/api";
+//const baseURL = "http://localhost:8080";
 const api = axios.create({
   baseURL: baseURL,
   timeout: 10000,
@@ -249,7 +249,6 @@ export async function register(userData: {
   const response = await api.post("/auth/register", userData);
   return response.data;
 
-  // TODO: BACKEND INTEGRATION - Replace with actual API call
   // const response = await fetch('/api/auth/register', {
   //   method: 'POST',
   //   headers: { 'Content-Type': 'application/json' },
@@ -257,6 +256,27 @@ export async function register(userData: {
   // });
   // if (!response.ok) throw new Error('Registration failed');
   // return response.json();
+}
+
+/**
+ * Forgot Password API
+ * POST /api/auth/forgot-password
+ */
+export async function forgotPassword(email: string) {
+  const response = await api.post("/auth/forgot-password", { email });
+  return response.data;
+}
+
+/**
+ * Reset Password API
+ * POST /api/auth/reset-password
+ */
+export async function resetPassword(token: string, newPassword: string) {
+  const response = await api.post("/auth/reset-password", {
+    token,
+    newPassword,
+  });
+  return response.data;
 }
 
 /**
