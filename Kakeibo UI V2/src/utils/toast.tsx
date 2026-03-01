@@ -46,7 +46,7 @@
  * Then add <Toaster /> to your root component (App.tsx)
  */
 
-import { toast as sonnerToast, Toaster as SonnerToaster } from "sonner@2.0.3";
+import { toast as sonnerToast, Toaster as SonnerToaster } from "sonner";
 
 // ================================
 // TYPE DEFINITIONS
@@ -91,8 +91,8 @@ function success(message: string, options?: ToastOptions | string) {
   return sonnerToast.success(message, {
     description: opts?.description,
     duration: opts?.duration || 4000,
-    action: opts?.action,
-    cancel: opts?.cancel,
+    action: opts?.action as any,
+    cancel: opts?.cancel as any,
   });
 }
 
@@ -111,8 +111,8 @@ function error(message: string, options?: ToastOptions | string) {
   return sonnerToast.error(message, {
     description: opts?.description,
     duration: opts?.duration || 5000, // Errors stay longer
-    action: opts?.action,
-    cancel: opts?.cancel,
+    action: opts?.action as any,
+    cancel: opts?.cancel as any,
   });
 }
 
@@ -130,8 +130,8 @@ function warning(message: string, options?: ToastOptions | string) {
   return sonnerToast.warning(message, {
     description: opts?.description,
     duration: opts?.duration || 4000,
-    action: opts?.action,
-    cancel: opts?.cancel,
+    action: opts?.action as any,
+    cancel: opts?.cancel as any,
   });
 }
 
@@ -149,8 +149,8 @@ function info(message: string, options?: ToastOptions | string) {
   return sonnerToast.info(message, {
     description: opts?.description,
     duration: opts?.duration || 4000,
-    action: opts?.action,
-    cancel: opts?.cancel,
+    action: opts?.action as any,
+    cancel: opts?.cancel as any,
   });
 }
 

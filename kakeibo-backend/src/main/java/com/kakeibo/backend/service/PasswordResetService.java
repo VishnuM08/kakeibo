@@ -41,7 +41,7 @@ public class PasswordResetService {
 
             // Build reset link
             String resetLink =
-                    "https://your-frontend-domain/reset-password?token=" + rawToken;
+                    "https://localhost:3000/reset-password?token=" + rawToken;
 
             // Send email
             emailService.sendPlainText(

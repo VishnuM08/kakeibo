@@ -63,11 +63,12 @@
             "vaul": "^1.1.2"
       },
       "devDependencies": {
-            "@types/node": "^20.10.0",
+            "@types/node": "^20.19.35",
             "@types/react": "^19.2.13",
             "@types/react-dom": "^19.2.3",
             "@types/styled-components": "^5.1.36",
             "@vitejs/plugin-react-swc": "^3.10.2",
+            "typescript": "^5.9.3",
             "vite": "^6.4.1"
       },
       "scripts": {

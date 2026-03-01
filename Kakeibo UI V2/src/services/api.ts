@@ -122,22 +122,29 @@ export const removeAuthToken = async (): Promise<void> => {
 
 import axios from "axios";
 import { BackendExpense } from "../types/BackendExpense";
+export type Expense = BackendExpense;
 export type { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
 import { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
 import { Preferences } from "@capacitor/preferences";
-
 import { Capacitor } from "@capacitor/core";
+import { ENV } from "../config/env";
 
 // When running in a browser (web), use the /api proxy to avoid CORS issues.
 // When running on native devices, use the full URL.
 const isNative = Capacitor.isNativePlatform();
-const baseURL = isNative ? import.meta.env.VITE_API_KEY : "/api";
+const baseURL = isNative ? ENV.API_BASE_URL : "/api";
 //const baseURL = "http://localhost:8080";
 const api = axios.create({
   baseURL: baseURL,
   timeout: 10000,
 });
 
+if (ENV.ENABLE_LOGS) {
+  api.interceptors.request.use((req) => {
+    console.log("API Request:", req);
+    return req;
+  });
+}
 // api.interceptors.request.use(
 //   (config) => {
 //     const token = localStorage.getItem("jwt_token");

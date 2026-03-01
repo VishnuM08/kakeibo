@@ -24,6 +24,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         return path.startsWith("/auth/login")
                 || path.startsWith("/auth/register")
+                || path.startsWith("/auth/forgot-password")
+                || path.startsWith("/auth/reset-password")
                 || path.startsWith("/actuator")
                 || path.startsWith("/test");
     }
@@ -39,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // 🚫 Block access if token missing
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            filterChain.doFilter(request, response);
             return;
         }
 
