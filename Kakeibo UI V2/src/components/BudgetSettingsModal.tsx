@@ -1,5 +1,6 @@
 import { X, Target } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface BudgetSettingsModalProps {
   isOpen: boolean;
@@ -17,6 +18,18 @@ export function BudgetSettingsModal({
   isDarkMode,
 }: BudgetSettingsModalProps) {
   const [budget, setBudget] = useState(currentBudget?.toString() || "");
+
+  // Scroll Look
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -38,30 +51,53 @@ export function BudgetSettingsModal({
     }
   };
 
-  return (
+  if (!isOpen) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 pt-6 sm:items-center sm:pt-0"
+      style={{
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}
       onClick={handleOverlayClick}
     >
-      <div className="bg-white rounded-t-[28px] sm:rounded-[28px] w-full max-w-lg p-6 animate-slide-up">
+      <div
+        className={`rounded-[28px] sm:rounded-[28px] w-full max-w-lg p-6 animate-slide-up shadow-2xl max-h-[90vh] overflow-y-auto ${
+          isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
+        }`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#34c759] to-[#30d158] flex items-center justify-center">
               <Target className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
-            <h2 className="text-[28px] font-bold text-black">Monthly Budget</h2>
+            <h2
+              className={`text-[28px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
+            >
+              Monthly Budget
+            </h2>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-[#f5f5f7] flex items-center justify-center hover:bg-[#e5e5e7] transition-colors"
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+              isDarkMode
+                ? "bg-[#2c2c2e] hover:bg-[#3c3c3e]"
+                : "bg-[#f5f5f7] hover:bg-[#e5e5e7]"
+            }`}
           >
-            <X className="w-5 h-5 text-black" strokeWidth={2.5} />
+            <X
+              className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+              strokeWidth={2.5}
+            />
           </button>
         </div>
 
         {/* Description */}
-        <p className="text-[15px] text-black/60 mb-6">
+        <p
+          className={`text-[15px] mb-6 ${isDarkMode ? "text-white/60" : "text-black/60"}`}
+        >
           Set your monthly spending limit. You'll receive warnings when
           approaching or exceeding this amount.
         </p>
@@ -70,11 +106,15 @@ export function BudgetSettingsModal({
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Budget Amount */}
           <div>
-            <label className="block text-[15px] font-semibold text-black mb-2">
+            <label
+              className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
+            >
               Monthly Limit
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[24px] text-black font-semibold">
+              <span
+                className={`absolute left-4 top-1/2 -translate-y-1/2 text-[24px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+              >
                 ₹
               </span>
               <input
@@ -83,15 +123,27 @@ export function BudgetSettingsModal({
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
                 placeholder="1000.00"
-                className="w-full pl-10 pr-4 py-4 bg-[#f5f5f7] rounded-[12px] text-[24px] font-bold text-black placeholder:text-black/30 focus:outline-none focus:ring-2 focus:ring-[#34c759]"
+                className={`w-full pl-10 pr-4 py-4 rounded-[12px] text-[24px] font-bold focus:outline-none focus:ring-2 focus:ring-[#34c759] ${
+                  isDarkMode
+                    ? "bg-[#2c2c2e] text-white placeholder:text-white/30"
+                    : "bg-[#f5f5f7] text-black placeholder:text-black/30"
+                }`}
                 required
               />
             </div>
           </div>
 
           {/* Info Box */}
-          <div className="bg-[#fff3cd] border border-[#ffc107]/30 rounded-[12px] p-4">
-            <p className="text-[13px] text-[#856404] leading-relaxed">
+          <div
+            className={`rounded-[12px] p-4 border ${
+              isDarkMode
+                ? "bg-[#fff3cd]/10 border-[#ffc107]/20"
+                : "bg-[#fff3cd] border-[#ffc107]/30"
+            }`}
+          >
+            <p
+              className={`text-[13px] leading-relaxed ${isDarkMode ? "text-[#fff3cd]/80" : "text-[#856404]"}`}
+            >
               💡 <span className="font-semibold">Tip:</span> Based on the
               Kakeibo method, aim to save at least 20% of your income each
               month.
@@ -107,6 +159,7 @@ export function BudgetSettingsModal({
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -9,89 +9,57 @@ import { Toaster } from "./utils/toast";
 import { getMe, getAuthToken, removeAuthToken } from "./services/api";
 import { Preferences } from "@capacitor/preferences";
 import { App as CapacitorApp } from "@capacitor/app";
-import { registerPlugin } from "@capacitor/core";
+import { registerPlugin, Capacitor } from "@capacitor/core";
+import {
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
 
 /**
  * App Wrapper Component
  * Handles Authentication, PIN Lock, and Lifecycle
  */
 
-export interface SmsExpensePayload {
-  amount: number;
-  description: string;
-  expenseDateTime: string;
-  source: "SMS_AUTO";
-  referenceId?: string;
-  category?: string;
-}
-
-/* ===============================
-   REGISTER PLUGIN (ONCE)
-================================ */
-export const SmsReader = registerPlugin<{
-  addListener(
-    eventName: "onSmsExpenseDetected",
-    listenerFunc: (data: SmsExpensePayload) => void,
-  ): Promise<{ remove: () => void }>;
-  getPendingExpenses(): Promise<{ expenses: SmsExpensePayload[] }>;
-  clearPendingExpenses(): Promise<void>;
-}>("SmsReader");
-
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isPINEnabled, setIsPINEnabled] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState<boolean | null>(null);
+  const [themeMode, setThemeMode] = useState<"light" | "dark" | "oled">(
+    "light",
+  );
   const [user, setUser] = useState<any>(null);
   const [displayScale, setDisplayScale] = useState(1.0);
-  const [resetToken, setResetToken] = useState<string | null>(null);
-  const [pendingSmsExpense, setPendingSmsExpense] =
-    useState<SmsExpensePayload | null>(null);
 
-  // ===============================
-  // SMS AUTO-DETECT LISTENER (GLOBAL)
-  // ===============================
-  // Capacitor Plugin Registration
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Deep Link Handling (Capacitor)
   useEffect(() => {
-    const setupListener = async () => {
-      const listener = await SmsReader.addListener(
-        "onSmsExpenseDetected",
-        (data: SmsExpensePayload) => {
-          const payload = data as SmsExpensePayload;
+    if (!Capacitor.isNativePlatform()) return;
 
-          console.log(
-            "📩 SMS EVENT RECEIVED IN REACT:",
-            JSON.stringify(payload, null, 2),
-          );
-
-          // Store it for later UI use
-          setPendingSmsExpense(payload);
-        },
-      );
-
-      return listener;
+    const setupDeepLinks = async () => {
+      await CapacitorApp.addListener("appUrlOpen", (data) => {
+        console.log("🔗 Deep Link Received:", data.url);
+        // Example: com.aignite.kakeibo://reset-password?token=XYZ
+        try {
+          const url = new URL(data.url);
+          const path = url.pathname || "/";
+          const search = url.search || "";
+          navigate(`${path}${search}`);
+        } catch (e) {
+          // Fallback if URL parsing fails
+          const slug = data.url.split("://").pop();
+          if (slug) navigate(`/${slug}`);
+        }
+      });
     };
 
-    let cleanup: { remove: () => void } | null = null;
-
-    setupListener().then((l) => (cleanup = l));
-
-    return () => {
-      cleanup?.remove();
-    };
-  }, []);
-
-  // Deep Link / Routing (Reset Password)
-  useEffect(() => {
-    const path = window.location.pathname;
-    const searchParams = new URLSearchParams(window.location.search);
-    const token = searchParams.get("token");
-
-    if (path === "/reset-password") {
-      setResetToken(token || "");
-    }
-  }, []);
+    setupDeepLinks();
+  }, [navigate]);
 
   // Apply Display Scale to root
   useEffect(() => {
@@ -138,11 +106,23 @@ export default function App() {
   useEffect(() => {
     const bootstrap = async () => {
       try {
-        // Load Dark Mode First
-        const { value: darkMode } = await Preferences.get({
-          key: "kakeibo_dark_mode",
+        // Load Theme Mode First
+        const { value: storedTheme } = await Preferences.get({
+          key: "kakeibo_theme_mode",
         });
-        setIsDarkMode(darkMode === "true");
+        if (storedTheme) {
+          setThemeMode(storedTheme as any);
+        } else {
+          // Compatibility migration: check old dark mode key
+          const { value: oldDarkMode } = await Preferences.get({
+            key: "kakeibo_dark_mode",
+          });
+          if (oldDarkMode === "true") {
+            setThemeMode("dark");
+          } else {
+            setThemeMode("light");
+          }
+        }
 
         // Load Display Scale
         const { value: scale } = await Preferences.get({
@@ -234,9 +214,9 @@ export default function App() {
 
   const handleAuthSuccess = useCallback(
     async (token: string, userData: any) => {
-      // Ensure we have normalized data
+      // Ensure we have basic normalized data for immediate optimistic UI
       const baseUser = userData?.user || userData;
-      const normalizedUser = {
+      const initialUser = {
         ...baseUser,
         name:
           baseUser.name ||
@@ -249,7 +229,7 @@ export default function App() {
           (typeof baseUser === "string" ? "" : baseUser.email),
       };
 
-      setUser(normalizedUser);
+      setUser(initialUser);
       setIsAuthenticated(true);
 
       // Check if new auth should be locked
@@ -262,6 +242,31 @@ export default function App() {
       } else {
         setIsPINEnabled(false);
         setIsUnlocked(true);
+      }
+
+      // Fetch the full identity payload exactly like bootstrap() does in background
+      try {
+        const rawData = await getMe();
+        const fullBaseUser = rawData?.user || rawData;
+        const normalizedUser = {
+          ...fullBaseUser,
+          name:
+            fullBaseUser.name ||
+            fullBaseUser.username ||
+            fullBaseUser.fullName ||
+            fullBaseUser.email ||
+            "User",
+          email:
+            fullBaseUser.email ||
+            (typeof fullBaseUser === "string" ? "" : fullBaseUser.email),
+        };
+        setUser(normalizedUser);
+        await Preferences.set({
+          key: "user_data",
+          value: JSON.stringify(normalizedUser),
+        });
+      } catch (err) {
+        console.error("[Auth] Failed to fetch full user on login:", err);
       }
     },
     [],
@@ -283,36 +288,84 @@ export default function App() {
     setIsPINEnabled(true);
   };
 
-  // Sync Dark Mode with Document Root
+  // Helper for existing components that just need to know if it's dark
+  const isDark = themeMode !== "light";
+
+  // Sync Theme Mode with Document Root
   useEffect(() => {
-    if (isDarkMode !== null) {
-      if (isDarkMode) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+    document.documentElement.classList.remove("dark", "oled-mode");
+    if (themeMode === "dark") {
+      document.documentElement.classList.add("dark");
+    } else if (themeMode === "oled") {
+      document.documentElement.classList.add("dark", "oled-mode");
     }
-  }, [isDarkMode]);
+  }, [themeMode]);
 
   const toggleDarkMode = async () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
+    let nextMode: "light" | "dark" | "oled" = "light";
+    if (themeMode === "light") nextMode = "dark";
+    else if (themeMode === "dark") nextMode = "oled";
+    else nextMode = "light";
+
+    setThemeMode(nextMode);
     await Preferences.set({
-      key: "kakeibo_dark_mode",
-      value: newMode.toString(),
+      key: "kakeibo_theme_mode",
+      value: nextMode,
     });
   };
 
+  // Helper for Reset Password Route
+  let resetPasswordElement = null;
+  if (!isAuthenticated) {
+    const searchParams = new URLSearchParams(location.search);
+    const token = searchParams.get("token") || "";
+    resetPasswordElement = (
+      <ResetPasswordScreen
+        token={token}
+        isDarkMode={isDark}
+        onResetSuccess={() => {
+          navigate("/login", { replace: true });
+        }}
+      />
+    );
+  }
+
+  // Main App Content with PIN Guard
+  let mainContentElement = null;
+  if (isAuthenticated !== null && isAuthenticated !== false) {
+    if (isPINEnabled && !isUnlocked) {
+      mainContentElement = (
+        <PINLockScreen onUnlock={handleUnlock} isDarkMode={isDark} />
+      );
+    } else {
+      mainContentElement = (
+        <ErrorBoundary>
+          <Toaster isDarkMode={isDark} position="top-center" />
+          <AppMain
+            isDarkMode={isDark}
+            themeMode={themeMode}
+            onToggleDarkMode={toggleDarkMode}
+            onOpenSettings={() => navigate("/settings")}
+          />
+        </ErrorBoundary>
+      );
+    }
+  }
+
   // 1. Loading State
-  if (isAuthenticated === null || isDarkMode === null) {
+  if (isAuthenticated === null) {
+    const isDarkGlobal = themeMode !== "light";
+    const bg =
+      themeMode === "oled" ? "#000000" : isDarkGlobal ? "#121212" : "#f5f5f7";
     return (
       <div
-        className={`fixed inset-0 flex items-center justify-center transition-colors duration-300 ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
+        className={`fixed inset-0 flex items-center justify-center transition-colors duration-300`}
+        style={{ background: bg }}
       >
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-t-[#007AFF] border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+          <div className="w-12 h-12 rounded-full border-4 border-t-[#007aff] border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
           <p
-            className={`text-[17px] font-medium tracking-tight ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+            className={`text-[17px] font-medium tracking-tight ${isDarkGlobal ? "text-white/50" : "text-black/50"}`}
           >
             Kakeibo
           </p>
@@ -321,61 +374,62 @@ export default function App() {
     );
   }
 
-  // 1.5. Password Reset Flow
-  if (resetToken !== null) {
-    return (
-      <ResetPasswordScreen
-        token={resetToken}
-        isDarkMode={isDarkMode ?? false}
-        onResetSuccess={() => {
-          setResetToken(null);
-          // Clear URL so refreshing doesn't show it again
-          window.history.replaceState({}, document.title, "/");
-        }}
-      />
-    );
-  }
-
-  // 2. Auth Flow
-  if (!isAuthenticated) {
-    return (
-      <AuthScreen onAuthSuccess={handleAuthSuccess} isDarkMode={isDarkMode} />
-    );
-  }
-
-  // 3. PIN Flow (Enforced even on startup if enabled)
-  if (isPINEnabled && !isUnlocked) {
-    return <PINLockScreen onUnlock={handleUnlock} isDarkMode={isDarkMode} />;
-  }
-
-  // 4. Content Flow
-  if (showSettings) {
-    return (
-      <SettingsView
-        onClose={() => setShowSettings(false)}
-        onLogout={handleLogout}
-        onEnablePINLock={handleEnablePINLock}
-        isPINEnabled={isPINEnabled}
-        userName={user?.name || "User"}
-        userEmail={user?.email || "user@example.com"}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={toggleDarkMode}
-        displayScale={displayScale}
-        onSetDisplayScale={setDisplayScale}
-      />
-    );
-  }
-
   return (
-    <ErrorBoundary>
-      <Toaster isDarkMode={isDarkMode} position="top-center" />
-      <AppMain
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={toggleDarkMode}
-        onOpenSettings={() => setShowSettings(true)}
-        pendingSmsExpense={pendingSmsExpense}
-        onConsumeSmsExpense={() => setPendingSmsExpense(null)}
-      />
-    </ErrorBoundary>
+    <Routes>
+      {/* Auth Flow */}
+      {!isAuthenticated ? (
+        <>
+          <Route
+            path="/login"
+            element={
+              <AuthScreen
+                onAuthSuccess={handleAuthSuccess}
+                isDarkMode={isDark}
+              />
+            }
+          />
+          <Route path="/reset-password" element={resetPasswordElement} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </>
+      ) : (
+        <>
+          {/* Main App Routes (all render MainContent which handles modals via URL) */}
+          <Route path="/" element={mainContentElement} />
+          <Route path="/add-expense" element={mainContentElement} />
+          <Route path="/edit-expense/:id" element={mainContentElement} />
+          <Route path="/analytics" element={mainContentElement} />
+          <Route path="/calendar" element={mainContentElement} />
+          <Route path="/savings" element={mainContentElement} />
+          <Route path="/recurring" element={mainContentElement} />
+          <Route path="/bill-reminders" element={mainContentElement} />
+          <Route path="/help" element={mainContentElement} />
+          <Route path="/export" element={mainContentElement} />
+
+          <Route path="/budget-settings" element={mainContentElement} />
+          <Route path="/search" element={mainContentElement} />
+
+          <Route
+            path="/settings"
+            element={
+              <SettingsView
+                onClose={() => navigate("/")}
+                onLogout={handleLogout}
+                onEnablePINLock={handleEnablePINLock}
+                isPINEnabled={isPINEnabled}
+                userName={user?.name || "User"}
+                userEmail={user?.email || "user@example.com"}
+                isDarkMode={isDark}
+                themeMode={themeMode}
+                onToggleDarkMode={toggleDarkMode}
+                displayScale={displayScale}
+                onSetDisplayScale={setDisplayScale}
+              />
+            }
+          />
+          {/* Catch-all for authenticated users */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </>
+      )}
+    </Routes>
   );
 }

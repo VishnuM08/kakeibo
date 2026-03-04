@@ -9,10 +9,12 @@ import {
   Shield,
   Trash2,
   ChevronRight,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { Preferences } from "@capacitor/preferences";
+import { motion, AnimatePresence } from "motion/react";
 //import { logout } from '../services/api';
 
 /**
@@ -33,6 +35,7 @@ interface SettingsViewProps {
   userName: string;
   userEmail: string;
   isDarkMode: boolean;
+  themeMode: "light" | "dark" | "oled";
   onToggleDarkMode: () => void;
   displayScale: number;
   onSetDisplayScale: (scale: number) => void;
@@ -46,6 +49,7 @@ export function SettingsView({
   userName,
   userEmail,
   isDarkMode,
+  themeMode,
   onToggleDarkMode,
   displayScale,
   onSetDisplayScale,
@@ -54,6 +58,17 @@ export function SettingsView({
   const [newPIN, setNewPIN] = useState("");
   const [confirmPIN, setConfirmPIN] = useState("");
   const [pinError, setPinError] = useState("");
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 1024 : false,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    setIsDesktop(mq.matches);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const handleSetupPIN = async () => {
     if (newPIN.length !== 4) {
@@ -109,11 +124,628 @@ export function SettingsView({
     }
   };
 
-  return (
+  const sectionContent = (
     <div
-      className={`fixed inset-0 z-50 overflow-y-auto ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
+      style={{
+        display: isDesktop ? "grid" : "flex",
+        gridTemplateColumns: isDesktop ? "repeat(2, 1fr)" : "1fr",
+        flexDirection: isDesktop ? "unset" : "column",
+        gap: 20,
+      }}
     >
-      <div className="max-w-lg mx-auto px-6 py-6 pt-safe">
+      {/* User Profile Card */}
+      <div
+        style={{
+          borderRadius: 16,
+          padding: "20px",
+          background: isDarkMode ? "#2c2c2e" : "#f5f5f7",
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+        }}
+      >
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg,#007aff,#0051D5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <User
+            style={{ width: 28, height: 28, color: "#fff" }}
+            strokeWidth={2.5}
+          />
+        </div>
+        <div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 18,
+              fontWeight: 700,
+              color: isDarkMode ? "#fff" : "#000",
+            }}
+          >
+            {userName}
+          </p>
+          <p
+            style={{
+              margin: "2px 0 0",
+              fontSize: 14,
+              color: isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)",
+            }}
+          >
+            {userEmail}
+          </p>
+        </div>
+      </div>
+
+      <div style={{ gridColumn: isDesktop ? "1 / -1" : "auto" }}>
+        {/* Settings Sections */}
+        <div
+          style={{
+            display: isDesktop ? "grid" : "flex",
+            gridTemplateColumns: isDesktop ? "repeat(2, 1fr)" : "1fr",
+            flexDirection: isDesktop ? "unset" : "column",
+            gap: 20,
+          }}
+        >
+          {[
+            {
+              title: "Security",
+              subtitle: "Protect your financial data",
+              items: [
+                {
+                  icon: Lock,
+                  label: "PIN Lock",
+                  sub: isPINEnabled ? "Enabled" : "Disabled",
+                  badge: isPINEnabled
+                    ? { text: "ON", color: "#34c759" }
+                    : { text: "OFF", color: "#ff3b30" },
+                  action: () =>
+                    isPINEnabled ? handleDisablePIN() : setShowSetupPIN(true),
+                },
+                {
+                  icon: Shield,
+                  label: "Face ID / Touch ID",
+                  sub: "Coming soon",
+                  badge: null,
+                  action: undefined,
+                },
+              ],
+            },
+            {
+              title: "Appearance",
+              subtitle: "Theme & Mode",
+              items: [
+                {
+                  icon: Palette,
+                  label: "Theme",
+                  sub:
+                    themeMode === "oled"
+                      ? "OLED"
+                      : themeMode === "dark"
+                        ? "Dark"
+                        : "Light",
+                  badge: null,
+                  action: async () => {
+                    await Haptics.impact({ style: ImpactStyle.Light });
+                    onToggleDarkMode();
+                  },
+                },
+              ],
+            },
+            {
+              title: "Data & Storage",
+              subtitle: "Offline mode & sync settings",
+              items: [
+                {
+                  icon: Database,
+                  label: "Offline Mode",
+                  sub: "Data synced with server when online",
+                  badge: { text: "Active", color: "#34c759" },
+                  action: undefined,
+                },
+                {
+                  icon: Trash2,
+                  label: "Clear Local Data",
+                  sub: "Remove all cached data",
+                  labelColor: "#ff3b30",
+                  badge: null,
+                  action: handleClearData,
+                },
+              ],
+            },
+          ].map((section) => (
+            <div
+              key={section.title}
+              style={{
+                borderRadius: 16,
+                overflow: "hidden",
+                background: isDarkMode ? "#2c2c2e" : "#ffffff",
+                border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"}`,
+              }}
+            >
+              <div style={{ padding: "14px 18px 10px" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: isDarkMode ? "#fff" : "#000",
+                  }}
+                >
+                  {section.title}
+                </p>
+                {section.subtitle && (
+                  <p
+                    style={{
+                      margin: "2px 0 0",
+                      fontSize: 12,
+                      color: isDarkMode
+                        ? "rgba(255,255,255,0.4)"
+                        : "rgba(0,0,0,0.4)",
+                    }}
+                  >
+                    {section.subtitle}
+                  </p>
+                )}
+              </div>
+              {section.items.map((item, i) => (
+                <button
+                  key={item.label}
+                  onClick={item.action}
+                  disabled={!item.action}
+                  style={{
+                    width: "100%",
+                    padding: "12px 18px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    background: "none",
+                    border: "none",
+                    borderTop: `1px solid ${isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"}`,
+                    cursor: item.action ? "pointer" : "default",
+                    textAlign: "left",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      flexShrink: 0,
+                      background: isDarkMode
+                        ? "rgba(255,255,255,0.06)"
+                        : "rgba(0,0,0,0.04)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <item.icon
+                      style={{
+                        width: 18,
+                        height: 18,
+                        color:
+                          (item as { labelColor?: string }).labelColor ||
+                          (isDarkMode ? "#fff" : "#000"),
+                      }}
+                      strokeWidth={2.5}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color:
+                          (item as { labelColor?: string }).labelColor ||
+                          (isDarkMode ? "#fff" : "#000"),
+                      }}
+                    >
+                      {item.label}
+                    </p>
+                    <p
+                      style={{
+                        margin: "1px 0 0",
+                        fontSize: 12,
+                        color: isDarkMode
+                          ? "rgba(255,255,255,0.4)"
+                          : "rgba(0,0,0,0.4)",
+                      }}
+                    >
+                      {item.sub}
+                    </p>
+                  </div>
+                  {(item as { toggle?: boolean }).toggle !== undefined ? (
+                    <div
+                      style={{
+                        width: 44,
+                        height: 26,
+                        borderRadius: 13,
+                        background: (item as { toggle?: boolean }).toggle
+                          ? "#34c759"
+                          : isDarkMode
+                            ? "rgba(255,255,255,0.2)"
+                            : "rgba(0,0,0,0.15)",
+                        position: "relative",
+                        transition: "background 0.2s",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: 10,
+                          background: "#fff",
+                          position: "absolute",
+                          top: 3,
+                          left: (item as { toggle?: boolean }).toggle ? 21 : 3,
+                          transition: "left 0.2s",
+                        }}
+                      />
+                    </div>
+                  ) : item.badge ? (
+                    <span
+                      style={{
+                        padding: "2px 10px",
+                        borderRadius: 20,
+                        background: item.badge.color + "25",
+                        color: item.badge.color,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {item.badge.text}
+                    </span>
+                  ) : (
+                    <ChevronRight
+                      style={{
+                        width: 16,
+                        height: 16,
+                        color: isDarkMode
+                          ? "rgba(255,255,255,0.3)"
+                          : "rgba(0,0,0,0.3)",
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Logout */}
+      <div style={{ gridColumn: isDesktop ? "1 / -1" : "auto" }}>
+        <button
+          onClick={handleLogout}
+          style={{
+            width: "100%",
+            padding: "14px",
+            borderRadius: 14,
+            border: "none",
+            background: isDarkMode
+              ? "rgba(255,59,48,0.15)"
+              : "rgba(255,59,48,0.08)",
+            color: "#ff3b30",
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
+        >
+          <LogOut style={{ width: 18, height: 18 }} strokeWidth={2.5} />
+          Logout
+        </button>
+
+        {/* Footer */}
+        <div
+          style={{
+            textAlign: "center",
+            paddingBottom: 8,
+            gridColumn: isDesktop ? "1 / -1" : "auto",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 11,
+              color: isDarkMode ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)",
+            }}
+          >
+            © 2026 Aignite Technologies. All rights reserved.
+          </p>
+          <p
+            style={{
+              margin: "2px 0 0",
+              fontSize: 11,
+              color: isDarkMode ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.25)",
+            }}
+          >
+            Designed and engineered by Lavish.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // PIN modal (shared)
+  const pinModal = showSetupPIN && (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        backdropFilter: "blur(8px)",
+        zIndex: 70,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          borderRadius: 24,
+          width: "100%",
+          maxWidth: 420,
+          padding: 24,
+          background: isDarkMode ? "#1c1c1e" : "#fff",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: 22,
+            fontWeight: 700,
+            margin: "0 0 20px",
+            color: isDarkMode ? "#fff" : "#000",
+          }}
+        >
+          Setup PIN Lock
+        </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: 14,
+                fontWeight: 600,
+                marginBottom: 6,
+                color: isDarkMode ? "#fff" : "#000",
+              }}
+            >
+              Enter 4-digit PIN
+            </label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={newPIN}
+              onChange={(e) => setNewPIN(e.target.value.replace(/\D/g, ""))}
+              placeholder="••••"
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: 12,
+                border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+                background: isDarkMode ? "#2c2c2e" : "#f5f5f7",
+                color: isDarkMode ? "#fff" : "#000",
+                fontSize: 22,
+                textAlign: "center",
+                letterSpacing: "0.5em",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+          <div>
+            <label
+              style={{
+                display: "block",
+                fontSize: 14,
+                fontWeight: 600,
+                marginBottom: 6,
+                color: isDarkMode ? "#fff" : "#000",
+              }}
+            >
+              Confirm PIN
+            </label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={confirmPIN}
+              onChange={(e) => setConfirmPIN(e.target.value.replace(/\D/g, ""))}
+              placeholder="••••"
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: 12,
+                border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+                background: isDarkMode ? "#2c2c2e" : "#f5f5f7",
+                color: isDarkMode ? "#fff" : "#000",
+                fontSize: 22,
+                textAlign: "center",
+                letterSpacing: "0.5em",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+          {pinError && (
+            <p style={{ color: "#ff3b30", fontSize: 14, margin: 0 }}>
+              {pinError}
+            </p>
+          )}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={() => {
+                setShowSetupPIN(false);
+                setNewPIN("");
+                setConfirmPIN("");
+                setPinError("");
+              }}
+              style={{
+                flex: 1,
+                padding: 14,
+                borderRadius: 12,
+                border: "none",
+                background: isDarkMode ? "#2c2c2e" : "#f5f5f7",
+                color: isDarkMode ? "#fff" : "#000",
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSetupPIN}
+              style={{
+                flex: 1,
+                padding: 14,
+                borderRadius: 12,
+                border: "none",
+                background: isDarkMode ? "#fff" : "#000",
+                color: isDarkMode ? "#000" : "#fff",
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Enable
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Desktop Layout: centered dialog ──
+  if (isDesktop) {
+    return (
+      <>
+        <div
+          className="animate-fade-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 32,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
+          <div
+            className="animate-modal-enter glass-panel"
+            style={{
+              width: "100%",
+              maxWidth: 680,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              borderRadius: 32,
+              boxShadow: "0 32px 80px rgba(0,0,0,0.5)",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Dialog Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "24px 28px 20px",
+                borderBottom: `1px solid ${isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
+              }}
+            >
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: isDarkMode ? "#fff" : "#000",
+                }}
+              >
+                Settings
+              </h2>
+              <button
+                onClick={onClose}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  border: "none",
+                  background: isDarkMode
+                    ? "rgba(255,255,255,0.08)"
+                    : "rgba(0,0,0,0.06)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: isDarkMode
+                    ? "rgba(255,255,255,0.6)"
+                    : "rgba(0,0,0,0.6)",
+                }}
+              >
+                <X style={{ width: 16, height: 16 }} strokeWidth={2.5} />
+              </button>
+            </div>
+            {/* Dialog Body */}
+            <div style={{ padding: "24px 28px" }}>{sectionContent}</div>
+          </div>
+        </div>
+        {pinModal}
+      </>
+    );
+  }
+
+  // ── Mobile Layout: full screen ──
+  const mobileBg =
+    themeMode === "oled" ? "#000000" : isDarkMode ? "#0a0a0c" : "#f5f5f7";
+  const cardBg =
+    themeMode === "oled" ? "#000000" : isDarkMode ? "#1c1c1e" : "#ffffff";
+  const textColor = isDarkMode ? "#ffffff" : "#000000";
+  const subTextColor = isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)";
+  const borderStyle = `1px solid ${themeMode === "oled" ? "rgba(255,255,255,0.15)" : isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"}`;
+
+  return (
+    <motion.div
+      drag="y"
+      dragConstraints={{ top: 0, bottom: 0 }}
+      dragElastic={0.2}
+      onDragEnd={(_, info) => {
+        if (info.offset.y > 100) onClose();
+      }}
+      className="fixed inset-0 z-50 overflow-y-auto animate-modal-enter transition-colors duration-300 custom-scrollbar shadow-2xl"
+      style={{ background: mobileBg }}
+    >
+      <div
+        className="max-w-lg mx-auto px-6 pb-24 safe-top"
+        style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)" }}
+      >
+        {/* Drag Handle (Mobile only) */}
+        <div className="w-12 h-1.5 bg-gray-300/30 dark:bg-gray-600/30 rounded-full mx-auto mb-6 mt-[-10px] sm:hidden" />
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <button
@@ -124,54 +756,41 @@ export function SettingsView({
                 : "bg-white hover:bg-[#e5e5e7]"
             }`}
           >
-            <ArrowLeft
-              className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-              strokeWidth={2.5}
-            />
+            <ArrowLeft className={`w-5 h-5 ${textColor}`} strokeWidth={2.5} />
           </button>
-          <h1
-            className={`text-[28px] font-bold flex-1 ${isDarkMode ? "text-white" : "text-black"}`}
-          >
+          <h1 className={`text-[28px] font-bold flex-1 ${textColor}`}>
             Settings
           </h1>
         </div>
 
         {/* User Profile Card */}
         <div
-          className={`rounded-[20px] p-5 mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
+          className={`rounded-[20px] p-5 mb-5 shadow-sm transition-colors`}
+          style={{ background: cardBg, border: borderStyle }}
         >
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051d5] flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051D5] flex items-center justify-center">
               <User className="w-8 h-8 text-white" strokeWidth={2.5} />
             </div>
             <div className="flex-1">
-              <h3
-                className={`text-[20px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
-              >
+              <h3 className={`text-[20px] font-bold ${textColor}`}>
                 {userName}
               </h3>
-              <p
-                className={`text-[15px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-              >
-                {userEmail}
-              </p>
+              <p className={`text-[15px] ${subTextColor}`}>{userEmail}</p>
             </div>
           </div>
         </div>
 
         {/* Security Settings */}
         <div
-          className={`rounded-[20px] overflow-hidden mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
+          className={`rounded-[20px] overflow-hidden mb-5 shadow-sm transition-colors`}
+          style={{ background: cardBg, border: borderStyle }}
         >
           <div className="px-5 py-4">
-            <h3
-              className={`text-[17px] font-bold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}
-            >
+            <h3 className={`text-[17px] font-bold mb-1 ${textColor}`}>
               Security
             </h3>
-            <p
-              className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-            >
+            <p className={`text-[13px] ${subTextColor}`}>
               Protect your financial data
             </p>
           </div>
@@ -181,11 +800,8 @@ export function SettingsView({
             onClick={() =>
               isPINEnabled ? handleDisablePIN() : setShowSetupPIN(true)
             }
-            className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
-              isDarkMode
-                ? "hover:bg-white/5 border-white/10"
-                : "hover:bg-black/5 border-black/5"
-            }`}
+            className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t`}
+            style={{ borderTop: borderStyle }}
           >
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -515,7 +1131,7 @@ export function SettingsView({
         <div className="mt-6 text-center space-y-1">
           <p
             className={`text-[11px] ${
-              isDarkMode ? "text-white/50" : "text-black/60"
+              isDarkMode ? "text-white/50" : "text-black/70"
             }`}
           >
             © 2026 Aignite Technologies. All rights reserved.
@@ -532,7 +1148,7 @@ export function SettingsView({
 
       {/* Setup PIN Modal */}
       {showSetupPIN && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center px-5">
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center px-5">
           <div
             className={`rounded-[28px] w-full max-w-md p-6 ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
           >
@@ -622,6 +1238,6 @@ export function SettingsView({
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

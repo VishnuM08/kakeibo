@@ -67,12 +67,14 @@ export function mapApiExpenseToUI(exp: BackendExpense): UIExpense {
     icon: getCategoryIcon(exp.category),
     color: getCategoryColor(exp.category),
     syncStatus: "synced",
+    notes: exp.notes,
+    receiptUrl: exp.receiptUrl,
   };
 }
 
 /* ------------------ UI → BACKEND ------------------ */
 
-export function mapUIToBackendExpense(ui: UIExpense) {
+export function mapUIToBackendExpense(ui: UIExpense): Partial<BackendExpense> {
   return {
     description: ui.description,
     category: ui.category,
@@ -80,5 +82,9 @@ export function mapUIToBackendExpense(ui: UIExpense) {
 
     // ✅ ALWAYS send ISO UTC
     expenseDateTime: ui.dateTime,
+
+    // Optional metadata
+    notes: ui.notes,
+    receiptUrl: ui.receiptUrl,
   };
 }

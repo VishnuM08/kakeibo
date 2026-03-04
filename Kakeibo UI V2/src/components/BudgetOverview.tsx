@@ -143,8 +143,8 @@ export function BudgetOverview({
         onClick={onSetBudget}
         className={`w-full rounded-[20px] p-4 shadow-sm mb-5 transition-all active:scale-[0.98] border ${
           isDarkMode
-            ? "bg-[#1c1c1e]/90 border-white/10 hover:bg-[#2c2c2e]/90"
-            : "bg-white/80 border-black/5 hover:bg-white/90"
+            ? "bg-[#1c1c1e] border-white/10 hover:bg-[#2c2c2e]"
+            : "bg-white border-black/5 hover:bg-white"
         }`}
       >
         <div className="flex items-center justify-between">
@@ -188,8 +188,8 @@ export function BudgetOverview({
         onClick={() => setIsExpanded(true)}
         className={`w-full rounded-[20px] p-4 shadow-sm mb-5 transition-all active:scale-[0.98] border ${
           isDarkMode
-            ? "bg-[#1c1c1e]/90 border-white/10"
-            : "bg-white/80 border-black/5"
+            ? "bg-[#1c1c1e] border-white/10"
+            : "bg-white border-black/12 shadow-sm"
         }`}
       >
         <div className="flex items-center justify-between">
@@ -247,7 +247,7 @@ export function BudgetOverview({
         {/* Progress Bar */}
         <div
           className={`mt-3 h-1.5 rounded-full overflow-hidden ${
-            isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
+            isDarkMode ? "bg-[#2c2c2e]" : "bg-gray-100 border border-black/5"
           }`}
         >
           <div
@@ -271,7 +271,7 @@ export function BudgetOverview({
 
       {/* Expanded Modal */}
       {isExpanded && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 animate-fade-in">
           <div
             className={`w-full max-w-lg rounded-t-[30px] shadow-2xl animate-slide-up ${
               isDarkMode ? "bg-[#1c1c1e]" : "bg-white"

@@ -1,4 +1,4 @@
-import {
+﻿import {
   BarChart3,
   Calendar,
   Download,
@@ -11,10 +11,19 @@ import {
   Settings,
   Sun,
   Target,
+  Zap,
+  AlertTriangle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { message } from "antd";
+import {
+  useNavigate,
+  useLocation,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import {
   Budget,
@@ -53,15 +62,15 @@ import { MobileSearchModal } from "./MobileSearchModal";
 import { RecurringExpensesView } from "./RecurringExpensesView";
 import { RecurringExpensesWidget } from "./RecurringExpensesWidget";
 import { SavingsGoalsView } from "./SavingsGoalsView";
-import { SearchFilters } from "./SearchFilters";
+import { ExportModal } from "./ExportModal";
+
 import { UpcomingBillsWidget } from "./UpcomingBillsWidget";
+import { SwipeableExpenseItem } from "./SwipeableExpenseItem";
 import {
   mapApiExpenseToUI,
   mapUIToBackendExpense,
 } from "../utils/expenseMapper";
-import { SmsExpensePayload, SmsReader } from "../App";
-import { PendingSmsModal } from "./PendingSmsModal";
-import { extractAmountFromSms } from "../utils/smsAmountParser";
+
 /**
  * Main App Component
  *
@@ -94,89 +103,50 @@ const getCategoryColor = (category: string) => {
 
 interface AppMainProps {
   isDarkMode: boolean;
+  themeMode: "light" | "dark" | "oled";
   onToggleDarkMode: () => void;
   onOpenSettings: () => void;
-
-  // SMS auto-detect
-  pendingSmsExpense: SmsExpensePayload | null;
-  onConsumeSmsExpense: () => void;
 }
 
 export function AppMain({
   isDarkMode,
+  themeMode,
   onToggleDarkMode,
   onOpenSettings,
-  pendingSmsExpense,
-  onConsumeSmsExpense,
 }: AppMainProps) {
-  const [smsPrefill, setSmsPrefill] = useState<SmsExpensePayload | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [expenses, setExpenses] = useState<UIExpense[]>([]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [editingExpense, setEditingExpense] = useState<UIExpense | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [budgetLoading, setBudgetLoading] = useState(true);
+  const [budget, setBudgetData] = useState<Budget | null>(null);
+  const [monthlyBudget, setMonthlyBudget] = useState<number | null>(null);
+  const [addExpenseDate, setAddExpenseDate] = useState<Date | undefined>(
+    undefined,
+  );
+
+  // Local UI states (not in URL)
   const [isDailyPopupOpen, setIsDailyPopupOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedDayExpenses, setSelectedDayExpenses] = useState<UIExpense[]>(
     [],
   );
-  const [monthlyBudget, setMonthlyBudget] = useState<number | null>(null);
-  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
-  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<UIExpense | null>(null);
-  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
-  const [isSavingsGoalsOpen, setIsSavingsGoalsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isBillRemindersOpen, setIsBillRemindersOpen] = useState(false);
-  const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [budgetLoading, setBudgetLoading] = useState(true);
-  const [budget, setBudgetData] = useState<Budget | null>(null);
-  const [addExpenseDate, setAddExpenseDate] = useState<Date | undefined>(
-    undefined,
-  );
-  const [pendingSmsList, setPendingSmsList] = useState<SmsExpensePayload[]>([]);
-  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
 
-  useEffect(() => {
-    console.log("🧩 AppMain received pendingSmsExpense:", pendingSmsExpense);
-  }, [pendingSmsExpense]);
-
-  useEffect(() => {
-    if (pendingSmsExpense) {
-      console.log("📩 SMS Detected while app open, appending to review list");
-
-      const extractedAmount =
-        pendingSmsExpense.amount > 0
-          ? pendingSmsExpense.amount
-          : extractAmountFromSms(pendingSmsExpense.description);
-
-      const newExpense: SmsExpensePayload = {
-        ...pendingSmsExpense,
-        amount: extractedAmount ?? 0,
-      };
-
-      setPendingSmsList((prev) => [...prev, newExpense]);
-      setIsPendingModalOpen(true);
-      onConsumeSmsExpense();
-    }
-  }, [pendingSmsExpense]);
-
-  // Check for pending SMS on mount (Bulk Review)
-  useEffect(() => {
-    (async () => {
-      try {
-        const { expenses } = await SmsReader.getPendingExpenses();
-        if (expenses && expenses.length > 0) {
-          console.log("📡 Found pending SMS transactions:", expenses.length);
-          setPendingSmsList(expenses);
-          setIsPendingModalOpen(true);
-        }
-      } catch (err) {
-        console.warn("Failed to fetch pending SMS:", err);
-      }
-    })();
-  }, []);
+  // Helpers to check modal states from URL
+  const isSearchOpen = location.pathname === "/search";
+  const isAnalyticsOpen = location.pathname === "/analytics";
+  const isCalendarOpen = location.pathname === "/calendar";
+  const isSavingsGoalsOpen = location.pathname === "/savings";
+  const isRecurringModalOpen = location.pathname === "/recurring";
+  const isBillRemindersOpen = location.pathname === "/bill-reminders";
+  const isHelpOpen = location.pathname === "/help";
+  const isExportModalOpen = location.pathname === "/export";
+  const isAddModalOpen = location.pathname === "/add-expense";
+  const isEditModalOpen = location.pathname.startsWith("/edit-expense/");
+  const isBudgetModalOpen = location.pathname === "/budget-settings";
 
   const currentMonth = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -238,11 +208,18 @@ export function AppMain({
   const todayObj = new Date();
   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, "0")}-${String(todayObj.getDate()).padStart(2, "0")}`;
 
-  const todaysExpenses = expenses.filter((exp) => {
+  const allTodaysExpenses = expenses.filter((exp) => {
     if (!exp.date) return false;
-    // Because mapApiExpenseToUI handles creating YYYY-MM-DD in local time
-    // we can safely rely on a direct string match instead of re-parsing dates.
     return exp.date === todayStr;
+  });
+
+  const availableCategories = Array.from(
+    new Set(allTodaysExpenses.map((e) => e.category)),
+  );
+
+  const todaysExpenses = allTodaysExpenses.filter((exp) => {
+    if (selectedCategory) return exp.category === selectedCategory;
+    return true;
   });
 
   const todayTotal = todaysExpenses.reduce(
@@ -340,13 +317,12 @@ export function AppMain({
 
   const handleAddExpenseFromCalendar = (date: Date) => {
     setAddExpenseDate(date);
-    setIsDailyPopupOpen(false);
-    setIsAddModalOpen(true);
+    navigate("/add-expense");
   };
 
   const handleEditExpense = (expense: UIExpense) => {
     setEditingExpense(expense);
-    setIsEditModalOpen(true);
+    navigate(`/edit-expense/${expense.id}`);
   };
 
   const handleSaveEdit = async (updatedExpense: UIExpense) => {
@@ -405,7 +381,7 @@ export function AppMain({
 
   const handleRecurringExpense = (expense: UIExpense) => {
     setEditingExpense(expense);
-    setIsRecurringModalOpen(true);
+    navigate("/recurring");
   };
 
   const handleSaveRecurring = (recurringExpense: UIExpense) => {
@@ -416,7 +392,7 @@ export function AppMain({
       return exp;
     });
     setExpenses(updatedExpenses);
-    setIsRecurringModalOpen(false);
+    navigate("/");
   };
 
   const handleSearch = (query: string) => {
@@ -427,13 +403,14 @@ export function AppMain({
     return exp.description.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const handleExportToCSV = () => {
-    const { startDate, endDate } = getCurrentMonthRange();
+  const handleExportToCSV = async (startDate?: string, endDate?: string) => {
+    const start = startDate ?? "2000-01-01";
+    const end = endDate ?? "2099-12-31";
     const filteredExpenses = expenses.filter((exp) => {
       const expDate = new Date(exp.date);
-      return expDate >= new Date(startDate) && expDate <= new Date(endDate);
+      return expDate >= new Date(start) && expDate <= new Date(end);
     });
-    exportToCSV(filteredExpenses, "expenses.csv");
+    await exportToCSV(filteredExpenses, "kakeibo-expenses");
   };
 
   useEffect(() => {
@@ -512,13 +489,18 @@ export function AppMain({
 
   return (
     <div
-      className={`min-h-screen transition-colors duration-300 ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
+      className={`min-h-screen transition-colors duration-300 ${themeMode === "oled" ? "bg-[#000000]" : isDarkMode ? "bg-[#1a1a1a]" : "bg-[#f5f5f7]"}`}
+      style={{
+        fontFamily:
+          "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-lg mx-auto px-6 py-4 pt-safe pb-24"
+        className="max-w-lg mx-auto px-6 pb-24 safe-top"
+        style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)" }}
       >
         {/* Header */}
         <header className="mb-5">
@@ -535,14 +517,14 @@ export function AppMain({
                 Kakeibo
               </h1>
               <p
-                className={`text-[17px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                className={`text-[17px] ${isDarkMode ? "text-white/50" : "text-black/65"}`}
               >
                 Track today. Plan tomorrow.
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setIsHelpOpen(true)}
+                onClick={() => navigate("/help")}
                 className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
                   isDarkMode
                     ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
@@ -562,14 +544,16 @@ export function AppMain({
                     : "bg-white hover:bg-[#f5f5f7]"
                 }`}
               >
-                {isDarkMode ? (
+                {themeMode === "oled" ? (
+                  <Zap className="w-5 h-5 text-[#0a84ff]" strokeWidth={2.5} />
+                ) : isDarkMode ? (
                   <Sun className="w-5 h-5 text-white" strokeWidth={2.5} />
                 ) : (
                   <Moon className="w-5 h-5 text-black" strokeWidth={2.5} />
                 )}
               </button>
               <button
-                onClick={() => setIsAnalyticsOpen(true)}
+                onClick={() => navigate("/analytics")}
                 className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
                   isDarkMode
                     ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
@@ -616,37 +600,69 @@ export function AppMain({
         </header>
 
         {/* Budget Overview - Merged Component (Compact + Expandable) */}
-        <BudgetOverview
-          monthlyBudget={monthlyBudget}
-          currentSpending={monthTotal}
-          onSetBudget={() => setIsBudgetModalOpen(true)}
-          isDarkMode={isDarkMode}
-        />
+        {monthlyBudget > 0 && (
+          <div className="mb-5">
+            {monthTotal >= monthlyBudget * 0.8 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={`flex items-center gap-3 p-4 rounded-[18px] mb-3 border ${
+                  monthTotal >= monthlyBudget
+                    ? "bg-red-500/10 border-red-500/30 text-red-500"
+                    : "bg-red-50 border-red-200 text-red-600"
+                }`}
+              >
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[14px] font-bold">
+                    {monthTotal >= monthlyBudget
+                      ? "Limit Exceeded!"
+                      : "Budget Warning"}
+                  </p>
+                  <p className="text-[12px] font-medium opacity-80">
+                    {monthTotal >= monthlyBudget
+                      ? "You have already spent your entire monthly budget."
+                      : `You've used ${((monthTotal / monthlyBudget) * 100).toFixed(0)}% of your monthly budget.`}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+            <BudgetOverview
+              monthlyBudget={monthlyBudget}
+              currentSpending={monthTotal}
+              onSetBudget={() => navigate("/budget-settings")}
+              isDarkMode={isDarkMode}
+            />
+          </div>
+        )}
 
         {/* Upcoming Bills Widget */}
         <UpcomingBillsWidget
-          onOpenBills={() => setIsBillRemindersOpen(true)}
+          onOpenBills={() => navigate("/bill-reminders")}
           isDarkMode={isDarkMode}
         />
 
         {/* Recurring Expenses Widget */}
         <RecurringExpensesWidget
-          onOpenRecurring={() => setIsRecurringModalOpen(true)}
+          onOpenRecurring={() => navigate("/recurring")}
           isDarkMode={isDarkMode}
         />
 
-        {/* Add Expense Button */}
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className={`w-full py-[15px] px-6 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2.5 mb-5 shadow-sm active:scale-[0.97] font-semibold text-[17px] ${
-            isDarkMode
-              ? "bg-white hover:bg-white/90 text-black"
-              : "bg-black hover:bg-black/90 text-white"
-          }`}
+        {/* Highlighted Primary Add Expense Button */}
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          onClick={() => navigate("/add-expense")}
+          className="w-full mb-6 py-4 rounded-[20px] transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.97] font-semibold text-[17px] text-white bg-gradient-to-br from-[#007aff] to-[#0051d5] hover:opacity-95 shadow-lg border border-transparent"
+          style={{
+            boxShadow: isDarkMode
+              ? "0 8px 24px rgba(10, 132, 255, 0.3)"
+              : "0 8px 24px rgba(0, 122, 255, 0.3)",
+          }}
         >
-          <Plus className="w-5 h-5" strokeWidth={3} />
-          <span>Add Expense</span>
-        </button>
+          <Plus className="w-5 h-5" strokeWidth={2.5} />
+          <span className="tracking-wide">Add Expense</span>
+        </motion.button>
 
         {/* Quick Actions */}
         <motion.div
@@ -668,11 +684,11 @@ export function AppMain({
               hidden: { opacity: 0, y: 20 },
               visible: { opacity: 1, y: 0 },
             }}
-            onClick={() => setIsRecurringModalOpen(true)}
+            onClick={() => navigate("/recurring")}
             className={`py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
               isDarkMode
-                ? "bg-[#1c1c1e]/90 hover:bg-[#2c2c2e]/90 text-[#0a84ff] border-white/10"
-                : "bg-white/80 hover:bg-white/90 text-[#007aff] border-black/5"
+                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
+                : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
             }`}
           >
             <Repeat className="w-4 h-4" strokeWidth={2.5} />
@@ -683,11 +699,11 @@ export function AppMain({
               hidden: { opacity: 0, y: 20 },
               visible: { opacity: 1, y: 0 },
             }}
-            onClick={() => setIsSavingsGoalsOpen(true)}
+            onClick={() => navigate("/savings")}
             className={`py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
               isDarkMode
-                ? "bg-[#1c1c1e]/90 hover:bg-[#2c2c2e]/90 text-[#0a84ff] border-white/10"
-                : "bg-white/80 hover:bg-white/90 text-[#007aff] border-black/5"
+                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
+                : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
             }`}
           >
             <Target className="w-4 h-4" strokeWidth={2.5} />
@@ -698,89 +714,95 @@ export function AppMain({
               hidden: { opacity: 0, y: 20 },
               visible: { opacity: 1, y: 0 },
             }}
-            onClick={handleExportToCSV}
+            onClick={() => navigate("/export")}
             className={`py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
               isDarkMode
-                ? "bg-[#1c1c1e]/90 hover:bg-[#2c2c2e]/90 text-[#0a84ff] border-white/10"
-                : "bg-white/80 hover:bg-white/90 text-[#007aff] border-black/5"
+                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
+                : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
             }`}
           >
             <Download className="w-4 h-4" strokeWidth={2.5} />
             <span>Export</span>
           </motion.button>
+
           <motion.button
             variants={{
               hidden: { opacity: 0, y: 20 },
               visible: { opacity: 1, y: 0 },
             }}
-            onClick={() => setIsSearchOpen(true)}
+            onClick={() => navigate("/search")}
             className={`py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
               isDarkMode
-                ? "bg-[#1c1c1e]/90 hover:bg-[#2c2c2e]/90 text-[#0a84ff] border-white/10"
-                : "bg-white/80 hover:bg-white/90 text-[#007aff] border-black/5"
+                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
+                : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
             }`}
           >
             <Search className="w-4 h-4" strokeWidth={2.5} />
             <span>Search</span>
           </motion.button>
-          <motion.button
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            onClick={async () => {
-              try {
-                // Fetch the latest pending from native storage
-                const { expenses } = await SmsReader.getPendingExpenses();
-                if (expenses && expenses.length > 0) {
-                  setPendingSmsList(expenses);
-                }
-                setIsPendingModalOpen(true);
-              } catch (err) {
-                console.warn("Failed to fetch pending SMS manually:", err);
-                setIsPendingModalOpen(true); // Open anyway to show what's in local state
-              }
-            }}
-            className={`col-span-2 py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
-              isDarkMode
-                ? "bg-[#1c1c1e]/90 hover:bg-[#2c2c2e]/90 text-[#0a84ff] border-white/10"
-                : "bg-white/80 hover:bg-white/90 text-[#007aff] border-black/5"
-            }`}
-          >
-            <RefreshCw className="w-4 h-4" strokeWidth={2.5} />
-            {pendingSmsList.length > 0 ? (
-              <div className="relative flex items-center gap-2">
-                <span>Pending SMS ({pendingSmsList.length})</span>
-                <span className="absolute -top-1 -right-3 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-              </div>
-            ) : (
-              <span>Sync SMS</span>
-            )}
-          </motion.button>
         </motion.div>
 
         {/* Today's Expenses Section */}
         <section className="mb-5">
-          <motion.h2
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            className={`text-[28px] font-bold mb-4 tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}
-          >
-            Today
-          </motion.h2>
+          <div className="flex items-center justify-between mb-4">
+            <h3
+              className={`text-[22px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
+            >
+              Today's Expenses
+            </h3>
+            <span
+              className={`text-[15px] font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+            >
+              ₹{todayTotal.toFixed(2)}
+            </span>
+          </div>
 
+          {/* Category Filter Pills (Feature 6) */}
+          {availableCategories.length > 0 && (
+            <div className="flex overflow-x-auto gap-2 pb-3 mb-4 no-scrollbar -mx-6 px-6">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`px-4 py-2 rounded-full text-[13px] font-bold whitespace-nowrap transition-all ${
+                  selectedCategory === null
+                    ? "bg-[#007aff] text-white shadow-md shadow-[#007aff]/20"
+                    : themeMode === "oled"
+                      ? "bg-[#000000] text-white/50 border border-white/20"
+                      : isDarkMode
+                        ? "bg-[#1c1c1e] text-white/50 border border-white/5"
+                        : "bg-white text-black/65 border border-black/12 shadow-sm"
+                }`}
+              >
+                All
+              </button>
+              {availableCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-2 rounded-full text-[13px] font-bold whitespace-nowrap capitalize transition-all ${
+                    selectedCategory === cat
+                      ? "bg-[#007aff] text-white shadow-md shadow-[#007aff]/20"
+                      : themeMode === "oled"
+                        ? "bg-[#000000] text-white/50 border border-white/20"
+                        : isDarkMode
+                          ? "bg-[#1c1c1e] text-white/50 border border-white/5"
+                          : "bg-white text-black/65 border border-black/12 shadow-sm"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.35 }}
-            className={`backdrop-blur-xl rounded-[20px] overflow-hidden shadow-sm border ${
-              isDarkMode
-                ? "bg-[#1c1c1e]/90 border-white/10"
-                : "bg-white/80 border-black/5"
+            className={`rounded-[20px] overflow-hidden shadow-sm border transition-colors ${
+              themeMode === "oled"
+                ? "bg-[#000000] border-white/15"
+                : isDarkMode
+                  ? "bg-[#1c1c1e] border-white/10"
+                  : "bg-white border-black/5"
             }`}
           >
             <AnimatePresence mode="popLayout">
@@ -788,15 +810,11 @@ export function AppMain({
                 todaysExpenses.map((expense, index) => {
                   const Icon = expense.icon;
                   return (
-                    <motion.div
+                    <SwipeableExpenseItem
                       key={expense.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{
-                        duration: 0.3,
-                        delay: 0.4 + index * 0.05,
-                      }}
+                      onEdit={() => handleEditExpense(expense)}
+                      onDelete={() => handleDeleteExpense(expense.id)}
+                      isDarkMode={isDarkMode}
                     >
                       <button
                         onClick={() => handleEditExpense(expense)}
@@ -841,7 +859,7 @@ export function AppMain({
                           className={`h-[0.5px] ml-16 ${isDarkMode ? "bg-white/10" : "bg-black/8"}`}
                         ></div>
                       )}
-                    </motion.div>
+                    </SwipeableExpenseItem>
                   );
                 })
               ) : (
@@ -854,7 +872,7 @@ export function AppMain({
                   <p
                     className={`text-[17px] ${isDarkMode ? "text-white/40" : "text-black/40"}`}
                   >
-                    No expenses today
+                    No expenses matched
                   </p>
                 </motion.div>
               )}
@@ -864,11 +882,11 @@ export function AppMain({
 
         {/* View Calendar Button */}
         <button
-          onClick={() => setIsCalendarOpen(true)}
-          className={`w-full backdrop-blur-xl py-[15px] px-6 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.97] font-semibold text-[17px] border ${
+          onClick={() => navigate("/calendar")}
+          className={`w-full py-[15px] px-6 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.97] font-semibold text-[17px] border ${
             isDarkMode
-              ? "bg-[#1c1c1e]/90 hover:bg-[#2c2c2e]/90 text-[#0a84ff] border-white/10"
-              : "bg-white/80 hover:bg-white/90 text-[#007aff] border-black/5"
+              ? "bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white border-white/10"
+              : "bg-white hover:bg-gray-50 text-[#007aff] border-black/12 shadow-sm"
           }`}
         >
           <Calendar className="w-5 h-5" strokeWidth={2.5} />
@@ -878,7 +896,7 @@ export function AppMain({
         {/* Kakeibo Philosophy Quote */}
         <div className="mt-10 px-4">
           <div
-            className={`border-t pt-6 ${isDarkMode ? "border-white/10" : "border-black/8"}`}
+            className={`p-4 border-b ${isDarkMode ? "border-white/10" : "border-black/12"}`}
           >
             <p
               className={`text-[15px] text-center leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}
@@ -899,7 +917,7 @@ export function AppMain({
       {isCalendarOpen && (
         <CalendarView
           expenses={expenses}
-          onClose={() => setIsCalendarOpen(false)}
+          onClose={() => navigate("/")}
           onDateClick={handleDateClick}
           isDarkMode={isDarkMode}
         />
@@ -907,7 +925,7 @@ export function AppMain({
 
       <DailyExpensePopup
         isOpen={isDailyPopupOpen}
-        onClose={() => setIsDailyPopupOpen(false)}
+        onClose={() => navigate("/")}
         onAddExpense={handleAddExpenseFromCalendar}
         date={selectedDate}
         expenses={selectedDayExpenses}
@@ -917,7 +935,7 @@ export function AppMain({
       {isBudgetModalOpen && (
         <BudgetSettingsModal
           isOpen={isBudgetModalOpen}
-          onClose={() => setIsBudgetModalOpen(false)}
+          onClose={() => navigate("/")}
           currentBudget={monthlyBudget}
           onSaveBudget={handleSaveBudget}
           isDarkMode={isDarkMode}
@@ -927,14 +945,14 @@ export function AppMain({
       {isAnalyticsOpen && (
         <AnalyticsView
           expenses={expenses}
-          onClose={() => setIsAnalyticsOpen(false)}
+          onClose={() => navigate("/")}
           isDarkMode={isDarkMode}
         />
       )}
 
       {isRecurringModalOpen && (
         <RecurringExpensesView
-          onClose={() => setIsRecurringModalOpen(false)}
+          onClose={() => navigate("/")}
           isDarkMode={isDarkMode}
           onAddExpense={handleAddExpense}
         />
@@ -942,24 +960,22 @@ export function AppMain({
 
       {isSavingsGoalsOpen && (
         <SavingsGoalsView
-          onClose={() => setIsSavingsGoalsOpen(false)}
+          onClose={() => navigate("/")}
           isDarkMode={isDarkMode}
         />
       )}
 
-      <SearchFilters
-        onSearch={handleSearch}
-        onFilter={(filters) => {
-          // TODO: BACKEND INTEGRATION - Apply filters via API
-          console.log("Filters applied:", filters);
-        }}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => navigate("/")}
+        onExport={handleExportToCSV}
         isDarkMode={isDarkMode}
       />
 
       {isSearchOpen && (
         <MobileSearchModal
           isOpen={isSearchOpen}
-          onClose={() => setIsSearchOpen(false)}
+          onClose={() => navigate("/")}
           expenses={filteredExpenses}
           onSelectExpense={(expense) => {
             // When user selects an expense from search, open edit modal
@@ -982,17 +998,14 @@ export function AppMain({
 
       {isBillRemindersOpen && (
         <BillRemindersView
-          onClose={() => setIsBillRemindersOpen(false)}
+          onClose={() => navigate("/")}
           isDarkMode={isDarkMode}
           onAddExpense={handleAddExpense}
         />
       )}
 
       {isHelpOpen && (
-        <HelpView
-          onClose={() => setIsHelpOpen(false)}
-          isDarkMode={isDarkMode}
-        />
+        <HelpView onClose={() => navigate("/")} isDarkMode={isDarkMode} />
       )}
 
       {/* Primary Modals (should be on top) */}
@@ -1014,14 +1027,12 @@ export function AppMain({
         isOpen={isAddModalOpen}
         onClose={async () => {
           await Haptics.impact({ style: ImpactStyle.Light });
-          setIsAddModalOpen(false);
+          navigate("/");
           setAddExpenseDate(undefined);
-          setSmsPrefill(null); // cleanup
         }}
         onAdd={handleAddExpense}
         isDarkMode={isDarkMode}
         initialDate={addExpenseDate}
-        smsPrefill={smsPrefill} // 🔥 THIS LINE WAS MISSING
       />
 
       {isEditModalOpen && editingExpense && (
@@ -1031,7 +1042,7 @@ export function AppMain({
             // Trigger Haptics
             await Haptics.impact({ style: ImpactStyle.Light });
 
-            setIsEditModalOpen(false);
+            navigate("/");
           }}
           expense={editingExpense}
           onSave={handleSaveEdit}
@@ -1039,99 +1050,6 @@ export function AppMain({
           isDarkMode={isDarkMode}
         />
       )}
-      <PendingSmsModal
-        isOpen={isPendingModalOpen}
-        onClose={() => setIsPendingModalOpen(false)}
-        pendingExpenses={pendingSmsList}
-        isDarkMode={isDarkMode}
-        onSync={async (selectedItems) => {
-          let successCount = 0;
-          let failCount = 0;
-          const successfullySyncedIds = new Set<string>();
-
-          // 1. Iterate over parsed SMS expenses and use single POST requests
-          for (const item of selectedItems) {
-            try {
-              const id =
-                item.referenceId ||
-                `sms-${item.expenseDateTime}-${item.amount}`;
-
-              // Attach idempotency external key in notes
-              await createExpense({
-                description: item.description,
-                category: item.category || "other",
-                amount: item.amount,
-                expenseDateTime: item.expenseDateTime,
-                notes: `Source: Auto-Sync [${id}]`,
-              });
-
-              successfullySyncedIds.add(id);
-              successCount++;
-            } catch (err) {
-              console.error(
-                "Failed to sync individual SMS transaction:",
-                item,
-                err,
-              );
-              failCount++;
-            }
-          }
-
-          // 2. Update React state (remove only the successful items)
-          if (successCount > 0) {
-            setPendingSmsList((prev) => {
-              const remaining = prev.filter((item) => {
-                const id =
-                  item.referenceId ||
-                  `sms-${item.expenseDateTime}-${item.amount}`;
-                return !successfullySyncedIds.has(id);
-              });
-
-              // 3. Clear native storage ONLY if all pending items are now resolved
-              // (Native plugin only supports clearing all at once)
-              if (remaining.length === 0) {
-                SmsReader.clearPendingExpenses().catch((err) =>
-                  console.error("Failed to clear native storage:", err),
-                );
-              }
-
-              return remaining;
-            });
-
-            // Refresh expenses list
-            try {
-              const apiExpenses = await getExpenses();
-              if (Array.isArray(apiExpenses)) {
-                const mapped = apiExpenses.map((e) =>
-                  mapApiExpenseToUI(e as any),
-                );
-                setExpenses(mapped);
-              }
-            } catch (err) {
-              console.warn("Failed to refresh expenses list:", err);
-            }
-          }
-
-          // Close modal if no items left selected to process
-          if (pendingSmsList.length <= successCount) {
-            setIsPendingModalOpen(false);
-          }
-
-          if (failCount > 0 && successCount > 0) {
-            message.warning(
-              `Synced ${successCount} transactions. ${failCount} failed and will remain pending.`,
-            );
-            throw new Error("Partial sync failure"); // Keeps modal loading state/open for the failed ones
-          } else if (failCount > 0 && successCount === 0) {
-            message.error(
-              "Failed to sync transactions. Data preserved in native storage.",
-            );
-            throw new Error("Full sync failure");
-          } else {
-            message.success(`Successfully synced ${successCount} transactions`);
-          }
-        }}
-      />
     </div>
   );
 }

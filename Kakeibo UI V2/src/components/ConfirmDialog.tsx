@@ -1,16 +1,16 @@
 /**
  * CONFIRMATION DIALOG COMPONENT
- * 
+ *
  * Reusable confirmation dialog for destructive or important actions.
  * Prevents accidental deletions and ensures user intent.
- * 
+ *
  * FEATURES:
  * - Customizable title, message, and action buttons
  * - Different variants (danger, warning, info)
  * - Keyboard shortcuts (Enter to confirm, Escape to cancel)
  * - Focus management for accessibility
  * - Backdrop click to cancel
- * 
+ *
  * USAGE:
  * <ConfirmDialog
  *   isOpen={showConfirm}
@@ -22,7 +22,7 @@
  *   onConfirm={handleDelete}
  *   onCancel={() => setShowConfirm(false)}
  * />
- * 
+ *
  * ACCESSIBILITY:
  * - Focus trap within dialog
  * - Escape key to close
@@ -31,8 +31,8 @@
  * - Screen reader announcements
  */
 
-import React, { useEffect, useRef } from 'react';
-import { AlertTriangle, AlertCircle, Info, X } from 'lucide-react';
+import React, { useEffect, useRef } from "react";
+import { AlertTriangle, AlertCircle, Info, X } from "lucide-react";
 
 // ================================
 // TYPE DEFINITIONS
@@ -44,7 +44,7 @@ interface ConfirmDialogProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'danger' | 'warning' | 'info';
+  variant?: "danger" | "warning" | "info";
   onConfirm: () => void;
   onCancel: () => void;
   isDarkMode?: boolean;
@@ -59,9 +59,9 @@ export function ConfirmDialog({
   isOpen,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
-  variant = 'danger',
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  variant = "danger",
   onConfirm,
   onCancel,
   isDarkMode = false,
@@ -77,24 +77,27 @@ export function ConfirmDialog({
   const variantConfig = {
     danger: {
       icon: AlertTriangle,
-      iconBg: 'bg-red-100',
-      iconColor: 'text-red-600',
-      confirmBg: 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800',
-      confirmText: 'text-white',
+      iconBg: "bg-red-100",
+      iconColor: "text-red-600",
+      confirmBg:
+        "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800",
+      confirmText: "text-white",
     },
     warning: {
       icon: AlertCircle,
-      iconBg: 'bg-yellow-100',
-      iconColor: 'text-yellow-600',
-      confirmBg: 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800',
-      confirmText: 'text-white',
+      iconBg: "bg-yellow-100",
+      iconColor: "text-yellow-600",
+      confirmBg:
+        "bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800",
+      confirmText: "text-white",
     },
     info: {
       icon: Info,
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      confirmBg: 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800',
-      confirmText: 'text-white',
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+      confirmBg:
+        "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800",
+      confirmText: "text-white",
     },
   };
 
@@ -106,6 +109,17 @@ export function ConfirmDialog({
   // ================================
 
   useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) return;
 
     // Focus confirm button when dialog opens
@@ -113,19 +127,19 @@ export function ConfirmDialog({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Escape to cancel
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         onCancel();
       }
 
       // Enter to confirm (only if confirm button is focused or no input is focused)
-      if (e.key === 'Enter' && !loading) {
+      if (e.key === "Enter" && !loading) {
         e.preventDefault();
         onConfirm();
       }
 
       // Tab key - cycle between cancel and confirm buttons
-      if (e.key === 'Tab') {
+      if (e.key === "Tab") {
         e.preventDefault();
         if (document.activeElement === confirmButtonRef.current) {
           cancelButtonRef.current?.focus();
@@ -135,8 +149,8 @@ export function ConfirmDialog({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onConfirm, onCancel, loading]);
 
   // ================================
@@ -158,7 +172,11 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fadeIn"
+      style={{
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
@@ -167,7 +185,7 @@ export function ConfirmDialog({
     >
       <div
         className={`w-full max-w-sm rounded-3xl shadow-2xl animate-scaleIn transform transition-all ${
-          isDarkMode ? 'bg-[#1c1c1e]' : 'bg-white'
+          isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -176,8 +194,8 @@ export function ConfirmDialog({
           onClick={onCancel}
           className={`absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
             isDarkMode
-              ? 'hover:bg-white/10 text-white/50 hover:text-white'
-              : 'hover:bg-black/5 text-black/50 hover:text-black'
+              ? "hover:bg-white/10 text-white/50 hover:text-white"
+              : "hover:bg-black/5 text-black/50 hover:text-black"
           }`}
           aria-label="Close dialog"
         >
@@ -188,8 +206,13 @@ export function ConfirmDialog({
         <div className="p-8">
           {/* Icon */}
           <div className="flex justify-center mb-6">
-            <div className={`w-16 h-16 rounded-full ${config.iconBg} flex items-center justify-center`}>
-              <Icon className={`w-8 h-8 ${config.iconColor}`} strokeWidth={2.5} />
+            <div
+              className={`w-16 h-16 rounded-full ${config.iconBg} flex items-center justify-center`}
+            >
+              <Icon
+                className={`w-8 h-8 ${config.iconColor}`}
+                strokeWidth={2.5}
+              />
             </div>
           </div>
 
@@ -197,7 +220,7 @@ export function ConfirmDialog({
           <h2
             id="confirm-dialog-title"
             className={`text-2xl font-bold text-center mb-3 ${
-              isDarkMode ? 'text-white' : 'text-black'
+              isDarkMode ? "text-white" : "text-black"
             }`}
           >
             {title}
@@ -207,7 +230,7 @@ export function ConfirmDialog({
           <p
             id="confirm-dialog-message"
             className={`text-center mb-8 text-[15px] leading-relaxed ${
-              isDarkMode ? 'text-white/70' : 'text-black/70'
+              isDarkMode ? "text-white/70" : "text-black/70"
             }`}
           >
             {message}
@@ -221,7 +244,9 @@ export function ConfirmDialog({
               onClick={onConfirm}
               disabled={loading}
               className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 ${config.confirmBg} ${config.confirmText} ${
-                loading ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.97]'
+                loading
+                  ? "opacity-50 cursor-not-allowed"
+                  : "active:scale-[0.97]"
               }`}
               autoFocus
             >
@@ -261,9 +286,9 @@ export function ConfirmDialog({
               disabled={loading}
               className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 ${
                 isDarkMode
-                  ? 'bg-white/10 hover:bg-white/15 text-white'
-                  : 'bg-black/5 hover:bg-black/10 text-black'
-              } ${loading ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.97]'}`}
+                  ? "bg-white/10 hover:bg-white/15 text-white"
+                  : "bg-black/5 hover:bg-black/10 text-black"
+              } ${loading ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}
             >
               {cancelText}
             </button>
@@ -311,17 +336,17 @@ export function ConfirmDialog({
 
 /**
  * Custom hook for easy confirmation dialogs
- * 
+ *
  * Usage:
  * const confirm = useConfirm();
- * 
+ *
  * const handleDelete = async () => {
  *   const confirmed = await confirm({
  *     title: 'Delete this?',
  *     message: 'This cannot be undone.',
  *     variant: 'danger',
  *   });
- *   
+ *
  *   if (confirmed) {
  *     // Do something
  *   }
@@ -332,17 +357,17 @@ export function useConfirm() {
     isOpen: boolean;
     title: string;
     message: string;
-    variant: 'danger' | 'warning' | 'info';
+    variant: "danger" | "warning" | "info";
     confirmText: string;
     cancelText: string;
     resolve: ((value: boolean) => void) | null;
   }>({
     isOpen: false,
-    title: '',
-    message: '',
-    variant: 'danger',
-    confirmText: 'Confirm',
-    cancelText: 'Cancel',
+    title: "",
+    message: "",
+    variant: "danger",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
     resolve: null,
   });
 
@@ -350,7 +375,7 @@ export function useConfirm() {
     (options: {
       title: string;
       message: string;
-      variant?: 'danger' | 'warning' | 'info';
+      variant?: "danger" | "warning" | "info";
       confirmText?: string;
       cancelText?: string;
     }): Promise<boolean> => {
@@ -359,14 +384,14 @@ export function useConfirm() {
           isOpen: true,
           title: options.title,
           message: options.message,
-          variant: options.variant || 'danger',
-          confirmText: options.confirmText || 'Confirm',
-          cancelText: options.cancelText || 'Cancel',
+          variant: options.variant || "danger",
+          confirmText: options.confirmText || "Confirm",
+          cancelText: options.cancelText || "Cancel",
           resolve,
         });
       });
     },
-    []
+    [],
   );
 
   const handleConfirm = React.useCallback(() => {
@@ -397,7 +422,7 @@ export function useConfirm() {
         isDarkMode={isDarkMode}
       />
     ),
-    [dialogState, handleConfirm, handleCancel]
+    [dialogState, handleConfirm, handleCancel],
   );
 
   return { confirm, ConfirmDialog: Dialog };

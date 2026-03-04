@@ -8,8 +8,12 @@ import {
   Zap,
   MoreHorizontal,
 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { SmsExpensePayload } from "../App";
+import { useState, useEffect, useRef } from "react";
+
+import { Preferences } from "@capacitor/preferences";
+import { motion, AnimatePresence } from "motion/react";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
+import { createPortal } from "react-dom";
 
 interface AddExpenseModalProps {
   isOpen: boolean;
@@ -22,7 +26,6 @@ interface AddExpenseModalProps {
   }) => void;
   isDarkMode?: boolean;
   initialDate?: Date;
-  smsPrefill?: SmsExpensePayload | null;
 }
 
 const categories = [
@@ -76,34 +79,51 @@ export function AddExpenseModal({
   onAdd,
   isDarkMode = false,
   initialDate,
-  smsPrefill,
 }: AddExpenseModalProps) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
+  const amountInputRef = useRef<HTMLInputElement>(null);
+  const [recentCategoryIds, setRecentCategoryIds] = useState<string[]>([]);
+  const [isCelebrating, setIsCelebrating] = useState(false);
 
+  // Load recent categories
   useEffect(() => {
-    console.log("📥 Modal received smsPrefill:", smsPrefill);
-  }, [smsPrefill]);
+    (async () => {
+      const { value } = await Preferences.get({
+        key: "kakeibo_recent_categories",
+      });
+      if (value) {
+        setRecentCategoryIds(JSON.parse(value));
+      }
+    })();
+  }, []);
 
+  // Scroll Look
   useEffect(() => {
-    if (isOpen && smsPrefill) {
-      console.log("✍️ Prefilling AddExpenseModal from SMS:", smsPrefill);
-
-      setDescription(smsPrefill.description || "");
-      setAmount(
-        smsPrefill.amount && smsPrefill.amount > 0
-          ? smsPrefill.amount.toString()
-          : "",
-      );
-
-      // Category intentionally NOT auto-set (user choice)
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      // Clear state and auto-focus amount
+      setDescription("");
+      setCategory("");
+      setAmount("");
+      setIsCelebrating(false);
+      setTimeout(() => {
+        if (amountInputRef.current) {
+          amountInputRef.current.focus();
+        }
+      }, 400);
+    } else {
+      document.body.style.overflow = "unset";
     }
-  }, [isOpen, smsPrefill]);
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!description.trim() || !category || !amount) {
@@ -115,10 +135,27 @@ export function AddExpenseModal({
       return;
     }
 
+    // Save as recent category
+    const updatedRecents = [
+      category,
+      ...recentCategoryIds.filter((id) => id !== category),
+    ].slice(0, 3);
+    setRecentCategoryIds(updatedRecents);
+    await Preferences.set({
+      key: "kakeibo_recent_categories",
+      value: JSON.stringify(updatedRecents),
+    });
+
     // Create a date object for the expense
-    const expenseDate = new Date(initialDate || new Date());
-    // If it's a past date, we might want to keep the current time or set a default one
-    // For now, let's keep the current time even for past dates to maintain high resolution
+    let expenseDate: Date;
+    if (initialDate) {
+      // Safely clone the initial date passed from the calendar
+      expenseDate = new Date(initialDate.getTime());
+    } else {
+      expenseDate = new Date();
+    }
+
+    // Append the exact current time to the chosen date
     const now = new Date();
     expenseDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
@@ -129,11 +166,18 @@ export function AddExpenseModal({
       expenseDateTime: expenseDate.toISOString(),
     });
 
-    // Reset form
-    setDescription("");
-    setCategory("");
-    setAmount("");
-    onClose();
+    // Feature 5: Celebration Animation
+    setIsCelebrating(true);
+    await Haptics.impact({ style: ImpactStyle.Medium });
+
+    // Success delay then close
+    setTimeout(() => {
+      setIsCelebrating(false);
+      setDescription("");
+      setCategory("");
+      setAmount("");
+      onClose();
+    }, 1500);
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -149,20 +193,90 @@ export function AddExpenseModal({
     onClose();
   };
 
-  return (
+  if (!isOpen) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 pt-10 safe-top sm:items-center sm:pt-0"
+      style={{
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}
       onClick={handleOverlayClick}
     >
-      <div
-        className={`rounded-t-[28px] sm:rounded-[28px] w-full max-w-lg p-6 animate-slide-up ${
+      <motion.div
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={0.2}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 100) handleClose();
+        }}
+        className={`relative rounded-[28px] sm:rounded-[24px] w-full max-w-md p-5 pb-8 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar ${
           isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
         }`}
       >
+        {/* Drag Handle (Mobile only) */}
+        <div className="w-12 h-1.5 bg-gray-300/30 dark:bg-gray-600/30 rounded-full mx-auto mb-4 mt-[-4px] sm:hidden" />
+        <AnimatePresence>
+          {isCelebrating && (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none rounded-[28px] overflow-hidden">
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                className="bg-green-500 rounded-full p-6 shadow-2xl z-10"
+              >
+                <svg
+                  className="w-16 h-16 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={4}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </motion.div>
+
+              {/* Confetti Particles */}
+              {[...Array(30)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                  animate={{
+                    x: (Math.random() - 0.5) * 600,
+                    y: (Math.random() - 0.5) * 600,
+                    opacity: 0,
+                    scale: 0.5,
+                    rotate: Math.random() * 720,
+                  }}
+                  transition={{ duration: 1.2, ease: "easeOut" }}
+                  className="absolute w-3 h-3 rounded-sm"
+                  style={{
+                    backgroundColor: [
+                      "#ff6b6b",
+                      "#4ecdc4",
+                      "#f7b731",
+                      "#007aff",
+                      "#a29bfe",
+                      "#ff9ff3",
+                    ][i % 6],
+                    left: "50%",
+                    top: "50%",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </AnimatePresence>
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <h2
-            className={`text-[28px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
+            className={`text-[24px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
           >
             Add Expense
           </h2>
@@ -181,18 +295,42 @@ export function AddExpenseModal({
           </button>
         </div>
 
-        {/* Form */}
-
-        {smsPrefill && (
-          <div className="mb-2 text-xs text-green-600 font-semibold">
-            Detected from SMS
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Amount (Premium Huge Input at Top) */}
+          <div className="flex flex-col items-center justify-center pt-2 pb-6">
+            <span
+              className={`text-[15px] font-semibold mb-2 uppercase tracking-wider ${
+                isDarkMode ? "text-white/50" : "text-black/50"
+              }`}
+            >
+              Amount
+            </span>
+            <div className="flex items-center justify-center gap-1">
+              <span
+                className={`text-[32px] font-bold ${
+                  isDarkMode ? "text-white/40" : "text-black/40"
+                }`}
+              >
+                ₹
+              </span>
+              <input
+                ref={amountInputRef}
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0"
+                className={`w-[200px] bg-transparent text-center text-[56px] font-bold tracking-tighter focus:outline-none placeholder:text-gray-300 ${isDarkMode ? "text-white" : "text-black"}`}
+                required
+                autoComplete="off"
+              />
+            </div>
           </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Expense Description */}
           <div>
             <label
-              className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
+              className={`block text-[15px] font-semibold mb-1.5 ${isDarkMode ? "text-white" : "text-black"}`}
             >
               Description
             </label>
@@ -210,14 +348,47 @@ export function AddExpenseModal({
             />
           </div>
 
-          {/* Category */}
+          {/* Category Section */}
           <div>
             <label
-              className={`block text-[15px] font-semibold mb-3 ${isDarkMode ? "text-white" : "text-black"}`}
+              className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
             >
               Category
             </label>
-            <div className="grid grid-cols-2 gap-3">
+
+            {/* Feature 8: Recent Categories */}
+            {recentCategoryIds.length > 0 && (
+              <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar -mx-1 px-1">
+                {recentCategoryIds.map((id) => {
+                  const cat = categories.find((c) => c.value === id);
+                  if (!cat) return null;
+                  const Icon = cat.icon;
+                  return (
+                    <button
+                      key={`recent-${id}`}
+                      type="button"
+                      onClick={() => setCategory(id)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-full border transition-all ${
+                        category === id
+                          ? "bg-[#007aff] border-[#007aff] text-white shadow-md shadow-[#007aff]/20"
+                          : isDarkMode
+                            ? "bg-[#2c2c2e] border-white/5 text-white/50"
+                            : "bg-[#f5f5f7] border-black/5 text-black/50"
+                      }`}
+                    >
+                      <Icon
+                        className={`w-3.5 h-3.5 ${category === id ? "text-white" : "text-gray-400"}`}
+                      />
+                      <span className="text-[13px] font-bold capitalize">
+                        {id}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 max-h-[220px] overflow-y-auto no-scrollbar pr-1">
               {categories.map((cat) => {
                 const Icon = cat.icon;
                 const isSelected = category === cat.value;
@@ -265,37 +436,6 @@ export function AddExpenseModal({
             </div>
           </div>
 
-          {/* Amount */}
-          <div>
-            <label
-              className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
-            >
-              Amount
-            </label>
-            <div className="relative">
-              <span
-                className={`absolute left-4 top-1/2 -translate-y-1/2 text-[17px] font-semibold ${
-                  isDarkMode ? "text-white/50" : "text-black/50"
-                }`}
-              >
-                ₹
-              </span>
-              <input
-                type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className={`w-full pl-8 pr-4 py-3.5 rounded-[12px] text-[17px] focus:outline-none focus:ring-2 ${
-                  isDarkMode
-                    ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
-                    : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
-                }`}
-                required
-              />
-            </div>
-          </div>
-
           {/* Date Display */}
           <div
             className={`rounded-[12px] px-4 py-3 ${isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"}`}
@@ -322,16 +462,27 @@ export function AddExpenseModal({
           {/* Submit Button */}
           <button
             type="submit"
-            className={`w-full py-[15px] px-6 rounded-[14px] transition-all duration-150 font-semibold text-[17px] active:scale-[0.97] mt-6 ${
-              isDarkMode
-                ? "bg-white hover:bg-white/90 text-black"
-                : "bg-black hover:bg-black/90 text-white"
+            disabled={isCelebrating}
+            className={`w-full py-3.5 rounded-[14px] transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.97] font-semibold text-[16px] text-white mt-4 border border-transparent ${
+              isCelebrating
+                ? "bg-green-500 shadow-lg shadow-green-500/25"
+                : "bg-[#007aff] hover:bg-[#0066cc]"
             }`}
+            style={
+              !isCelebrating
+                ? {
+                    boxShadow: isDarkMode
+                      ? "0 8px 24px rgba(10, 132, 255, 0.25)"
+                      : "0 8px 24px rgba(0, 122, 255, 0.25)",
+                  }
+                : undefined
+            }
           >
-            Add Expense
+            {isCelebrating ? "Success!" : "Add Expense"}
           </button>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </div>,
+    document.body,
   );
 }

@@ -80,7 +80,7 @@ export function PINLockScreen({
       <div className="max-w-md w-full px-8">
         {/* Logo / Title */}
         <div className="text-center mb-12">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051d5] flex items-center justify-center mx-auto mb-6 shadow-lg">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051D5] flex items-center justify-center mx-auto mb-6 shadow-lg">
             <Lock className="w-10 h-10 text-white" strokeWidth={2.5} />
           </div>
           <h1

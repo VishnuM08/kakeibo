@@ -87,7 +87,7 @@ export function AnalyticsView({ expenses, onClose, isDarkMode }: AnalyticsViewPr
         </div>
 
         {/* Total Spending Card */}
-        <div className="bg-gradient-to-br from-[#007aff] to-[#0051d5] rounded-[20px] p-6 mb-5 shadow-lg">
+        <div className="bg-gradient-to-br from-[#007aff] to-[#0051D5] rounded-[20px] p-6 mb-5 shadow-lg">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-5 h-5 text-white/80" strokeWidth={2.5} />
             <p className="text-white/80 text-[13px] font-semibold uppercase tracking-wider">

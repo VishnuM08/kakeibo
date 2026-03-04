@@ -7,6 +7,7 @@ interface CalendarViewProps {
   onClose: () => void;
   onDateClick: (date: Date, dayExpenses: UIExpense[]) => void;
   isDarkMode?: boolean;
+  inline?: boolean;
 }
 
 export function CalendarView({
@@ -14,6 +15,7 @@ export function CalendarView({
   onClose,
   onDateClick,
   isDarkMode,
+  inline = false,
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -104,18 +106,18 @@ export function CalendarView({
       <button
         key={day}
         onClick={() => handleDateClick(day)}
-        className={`aspect-square rounded-[12px] p-2 flex flex-col items-center justify-center transition-all active:scale-95 ${
+        className={`${inline ? "h-9 rounded-[6px] p-0.5" : "aspect-square rounded-[12px] p-2"} flex flex-col items-center justify-center transition-all active:scale-95 ${
           today
             ? isDarkMode
               ? "bg-[#0a84ff] text-white hover:bg-[#0070e0]"
-              : "bg-[#007aff] text-white hover:bg-[#0051d5]"
+              : "bg-[#007aff] text-white hover:bg-[#0051D5]"
             : isDarkMode
               ? "hover:bg-[#2c2c2e]"
               : "hover:bg-[#f5f5f7]"
         }`}
       >
         <span
-          className={`text-[17px] font-semibold mb-0.5 ${
+          className={`${inline ? "text-[13px]" : "text-[17px]"} font-semibold mb-0.5 ${
             today ? "text-white" : isDarkMode ? "text-white" : "text-black"
           }`}
         >
@@ -123,7 +125,7 @@ export function CalendarView({
         </span>
         {hasExpenses && (
           <span
-            className={`text-[11px] font-medium ${
+            className={`${inline ? "text-[9px]" : "text-[11px]"} font-medium ${
               today
                 ? "text-white/80"
                 : isDarkMode
@@ -140,36 +142,50 @@ export function CalendarView({
 
   return (
     <div
-      className={`fixed inset-0 z-50 overflow-y-auto ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
+      className={
+        inline
+          ? "w-full h-full p-4"
+          : `fixed inset-0 z-50 overflow-y-auto ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"} px-5 py-6`
+      }
     >
-      <div className="max-w-lg mx-auto px-5 py-6">
+      <div
+        className={inline ? "w-full h-full flex flex-col" : "max-w-lg mx-auto"}
+      >
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={onClose}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-              isDarkMode
-                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
-                : "bg-white hover:bg-[#e5e5e7]"
-            }`}
-          >
-            <ArrowLeft
-              className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-              strokeWidth={2.5}
-            />
-          </button>
-          <h1
-            className={`text-[28px] font-bold flex-1 ${isDarkMode ? "text-white" : "text-black"}`}
+        {!inline ? (
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={onClose}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                isDarkMode
+                  ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
+                  : "bg-white hover:bg-[#e5e5e7]"
+              }`}
+            >
+              <ArrowLeft
+                className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                strokeWidth={2.5}
+              />
+            </button>
+            <h1
+              className={`text-[28px] font-bold flex-1 ${isDarkMode ? "text-white" : "text-black"}`}
+            >
+              Past Expenses
+            </h1>
+          </div>
+        ) : (
+          <h2
+            className={`${inline ? "text-[17px] mb-3" : "text-[22px] mb-5"} font-bold tracking-tight ${isDarkMode ? "text-white" : "text-black"}`}
           >
             Past Expenses
-          </h1>
-        </div>
+          </h2>
+        )}
 
         {/* Month Navigation */}
         <div
-          className={`rounded-[20px] p-5 mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
+          className={`rounded-[16px] p-4 mb-4 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
         >
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-4">
             <button
               onClick={previousMonth}
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
@@ -206,11 +222,13 @@ export function CalendarView({
           </div>
 
           {/* Weekday Headers */}
-          <div className="grid grid-cols-7 gap-2 mb-2">
+          <div
+            className={`grid grid-cols-7 ${inline ? "gap-1 mb-1" : "gap-2 mb-2"}`}
+          >
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
               <div
                 key={day}
-                className={`text-center text-[13px] font-semibold py-2 ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                className={`text-center ${inline ? "text-[11px] py-1" : "text-[13px] py-2"} font-semibold ${isDarkMode ? "text-white/40" : "text-black/40"}`}
               >
                 {day}
               </div>
@@ -218,12 +236,14 @@ export function CalendarView({
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2">{calendarDays}</div>
+          <div className={`grid grid-cols-7 ${inline ? "gap-1" : "gap-2"}`}>
+            {calendarDays}
+          </div>
         </div>
 
         {/* Summary */}
         <div
-          className={`rounded-[20px] p-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
+          className={`rounded-[20px] p-5 shadow-sm mt-auto ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
         >
           <h3
             className={`text-[17px] font-bold mb-3 ${isDarkMode ? "text-white" : "text-black"}`}

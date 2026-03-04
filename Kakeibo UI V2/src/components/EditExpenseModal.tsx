@@ -1,5 +1,7 @@
 import { X, Upload, Image as ImageIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "motion/react";
 import { Expense } from "../services/api";
 
 /**
@@ -77,11 +79,18 @@ export function EditExpenseModal({
   const [description, setDescription] = useState(expense.description);
   const [category, setCategory] = useState(expense.category);
   const [amount, setAmount] = useState(expense.amount.toString());
-  const [notes, setNotes] = useState(expense.notes || "");
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(
-    expense.receiptUrl || null,
-  );
+
+  // Scroll Look
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -97,19 +106,11 @@ export function EditExpenseModal({
       return;
     }
 
-    // TODO: BACKEND INTEGRATION - Upload receipt if new file selected
-    let receiptUrl = receiptPreview;
-    // if (receiptFile) {
-    //   receiptUrl = await uploadReceipt(receiptFile);
-    // }
-
     const updatedExpense: any = {
       ...expense,
       description: description.trim(),
       category,
       amount: numAmount,
-      notes: notes.trim() || undefined,
-      receiptUrl: receiptUrl || undefined,
       updatedAt: new Date().toISOString(),
     };
 
@@ -122,23 +123,8 @@ export function EditExpenseModal({
 
   const handleDelete = () => {
     if (window.confirm("Are you sure you want to delete this expense?")) {
-      // TODO: BACKEND INTEGRATION - Call deleteExpense API
-      // await deleteExpense(expense.id);
-
       onDelete(expense.id);
       onClose();
-    }
-  };
-
-  const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setReceiptFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setReceiptPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -150,16 +136,30 @@ export function EditExpenseModal({
 
   const categoryInfo = categories.find((cat) => cat.value === category);
 
-  return (
+  if (!isOpen) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center overflow-y-auto"
+      className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 pt-10 safe-top sm:items-center sm:pt-0"
+      style={{
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}
       onClick={handleOverlayClick}
     >
-      <div
-        className={`rounded-t-[28px] sm:rounded-[28px] w-full max-w-lg p-6 animate-slide-up max-h-[90vh] overflow-y-auto ${
+      <motion.div
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={0.2}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 100) onClose();
+        }}
+        className={`relative rounded-[28px] sm:rounded-[28px] w-full max-w-md p-6 pb-8 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar ${
           isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
         }`}
       >
+        {/* Drag Handle (Mobile only) */}
+        <div className="w-12 h-1.5 bg-gray-300/30 dark:bg-gray-600/30 rounded-full mx-auto mb-4 mt-[-4px] sm:hidden" />
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2
@@ -287,80 +287,6 @@ export function EditExpenseModal({
             </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label
-              className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
-            >
-              Notes (Optional)
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any additional details..."
-              rows={3}
-              className={`w-full px-4 py-3.5 rounded-[12px] text-[17px] focus:outline-none focus:ring-2 resize-none ${
-                isDarkMode
-                  ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
-                  : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
-              }`}
-            />
-          </div>
-
-          {/* Receipt Upload */}
-          <div>
-            <label
-              className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
-            >
-              Receipt (Optional)
-            </label>
-
-            {receiptPreview ? (
-              <div className="relative">
-                <img
-                  src={receiptPreview}
-                  alt="Receipt"
-                  className={`w-full h-48 object-cover rounded-[12px] border-2 ${
-                    isDarkMode ? "border-[#2c2c2e]" : "border-[#f5f5f7]"
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReceiptPreview(null);
-                    setReceiptFile(null);
-                  }}
-                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
-                >
-                  <X className="w-4 h-4 text-white" strokeWidth={2.5} />
-                </button>
-              </div>
-            ) : (
-              <label
-                className={`w-full h-32 rounded-[12px] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${
-                  isDarkMode
-                    ? "border-[#2c2c2e] hover:border-[#0a84ff] hover:bg-[#0a84ff]/5"
-                    : "border-[#e5e5e7] hover:border-[#007aff] hover:bg-[#007aff]/5"
-                }`}
-              >
-                <Upload
-                  className={`w-8 h-8 mb-2 ${isDarkMode ? "text-white/40" : "text-black/40"}`}
-                />
-                <p
-                  className={`text-[15px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-                >
-                  Tap to upload receipt
-                </p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleReceiptChange}
-                  className="hidden"
-                />
-              </label>
-            )}
-          </div>
-
           {/* Action Buttons */}
           <div className="flex gap-3 pt-2">
             <button
@@ -386,7 +312,8 @@ export function EditExpenseModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </div>,
+    document.body,
   );
 }

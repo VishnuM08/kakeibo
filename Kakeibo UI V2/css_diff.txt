@@ -1,0 +1,231 @@
+﻿diff --git a/Kakeibo UI V2/src/index.css b/Kakeibo UI V2/src/index.css
+old mode 100755
+new mode 100644
+index 73f0272..b08abf6
+--- a/Kakeibo UI V2/src/index.css	
++++ b/Kakeibo UI V2/src/index.css	
+@@ -196,7 +196,9 @@
+   html {
+     font-size: calc(16px * var(--app-scale));
+     height: 100%;
+-    background-color: #f5f5f7;
++    background: linear-gradient(-45deg, #f0f4ff, #e6edff, #f9f0ff, #fff0f5);
++    background-size: 400% 400%;
++    animation: gradientShift 15s ease infinite;
+     overflow-x: hidden;
+   }
+ 
+@@ -208,7 +210,9 @@
+   }
+ 
+   html.dark {
+-    background-color: #121212;
++    background: linear-gradient(-45deg, #0a0b10, #130f1b, #1b0f15, #06070a);
++    background-size: 400% 400%;
++    animation: gradientShift 15s ease infinite;
+   }
+ 
+   *,
+@@ -2140,8 +2144,8 @@
+     );
+   }
+ 
+-  .to-\[\#0051d5\] {
+-    --tw-gradient-to: #0051d5;
++  .to-\[\#0051D5\] {
++    --tw-gradient-to: #0051D5;
+     --tw-gradient-stops: var(
+       --tw-gradient-via-stops,
+       var(--tw-gradient-position),
+@@ -3219,8 +3223,8 @@
+   }
+ 
+   @media (hover: hover) {
+-    .hover\:bg-\[\#0051d5\]:hover {
+-      background-color: #0051d5;
++    .hover\:bg-\[\#0051D5\]:hover {
++      background-color: #0051D5;
+     }
+   }
+ 
+@@ -4237,7 +4241,51 @@ html {
+   }
+ }
+ 
++@keyframes gradientShift {
++  0% {
++    background-position: 0% 50%;
++  }
++  50% {
++    background-position: 100% 50%;
++  }
++  100% {
++    background-position: 0% 50%;
++  }
++}
++
+ @layer utilities {
++  /* Neo-Glassmorphism Utilities */
++  .glass-card {
++    background: rgba(255, 255, 255, 0.4);
++    backdrop-filter: blur(24px);
++    -webkit-backdrop-filter: blur(24px);
++    border: 1px solid rgba(255, 255, 255, 0.4);
++    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.04);
++  }
++
++  .dark .glass-card {
++    background: rgba(30, 30, 32, 0.4);
++    backdrop-filter: blur(24px);
++    -webkit-backdrop-filter: blur(24px);
++    border: 1px solid rgba(255, 255, 255, 0.08);
++    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
++  }
++
++  .glass-panel {
++    background: rgba(255, 255, 255, 0.65);
++    backdrop-filter: blur(32px);
++    -webkit-backdrop-filter: blur(32px);
++    border: 1px solid rgba(255, 255, 255, 0.5);
++    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
++  }
++
++  .dark .glass-panel {
++    background: rgba(25, 25, 28, 0.55);
++    backdrop-filter: blur(32px);
++    -webkit-backdrop-filter: blur(32px);
++    border: 1px solid rgba(255, 255, 255, 0.1);
++    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
++  }
+   /* Premium Smartphone Slider Styling */
+   .custom-slider {
+     -webkit-appearance: none;
+@@ -4324,3 +4372,128 @@ html {
+     margin-bottom: env(safe-area-inset-bottom);
+   }
+ }
++
++/* Modal Entry Animation */
++@keyframes modalEnter {
++  from {
++    opacity: 0;
++    transform: scale(0.95) translateY(20px);
++  }
++  to {
++    opacity: 1;
++    transform: scale(1) translateY(0);
++  }
++}
++
++.animate-modal-enter {
++  animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
++}
++
++@keyframes fadeOverlay {
++  from {
++    opacity: 0;
++  }
++  to {
++    opacity: 1;
++  }
++}
++
++.animate-fade-overlay {
++  animation: fadeOverlay 0.3s ease forwards;
++}
++
++/* Staggered List Animations */
++@keyframes slideInRight {
++  from {
++    opacity: 0;
++    transform: translateX(20px);
++  }
++  to {
++    opacity: 1;
++    transform: translateX(0);
++  }
++}
++
++.animate-slide-in-right {
++  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
++  opacity: 0;
++}
++
++@keyframes slideUpStagger {
++  from {
++    opacity: 0;
++    transform: translateY(15px);
++  }
++  to {
++    opacity: 1;
++    transform: translateY(0);
++  }
++.animate-slide-up-stagger {
++  animation: slideUpStagger 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
++  opacity: 0;
++}
++
++/* Premium Continuous Animations */
++@keyframes float {
++  0% {
++    transform: translateY(0px);
++  }
++  50% {
++    transform: translateY(-4px);
++  }
++  100% {
++    transform: translateY(0px);
++  }
++}
++
++.animate-float {
++  animation: float 4s ease-in-out infinite;
++}
++
++@keyframes shimmer {
++  0% {
++    transform: translateX(-100%);
++  }
++  100% {
++    transform: translateX(100%);
++  }
++}
++
++.animate-shimmer {
++  position: relative;
++  overflow: hidden;
++}
++
++.animate-shimmer::after {
++  content: '';
++  position: absolute;
++  top: 0;
++  right: 0;
++  bottom: 0;
++  left: 0;
++  transform: translateX(-100%);
++  background-image: linear-gradient(
++    90deg,
++    rgba(255, 255, 255, 0) 0,
++    rgba(255, 255, 255, 0.1) 20%,
++    rgba(255, 255, 255, 0.4) 50%,
++    rgba(255, 255, 255, 0) 100%
++  );
++  animation: shimmer 3s infinite;
++}
++
++@keyframes pulseRing {
++  0% {
++    box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4);
++  }
++  70% {
++    box-shadow: 0 0 0 10px rgba(0, 122, 255, 0);
++  }
++  100% {
++    box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
++  }
++}
++
++.animate-pulse-ring {
++  animation: pulseRing 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
++}

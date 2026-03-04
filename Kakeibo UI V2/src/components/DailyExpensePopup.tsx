@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Coffee,
@@ -64,6 +66,18 @@ export function DailyExpensePopup({
   expenses,
   isDarkMode,
 }: DailyExpensePopupProps) {
+  // Scroll Look
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
   if (!isOpen || !date) return null;
 
   const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -81,19 +95,27 @@ export function DailyExpensePopup({
     }
   };
 
-  return (
+  if (!isOpen || !date) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 pt-6 sm:items-center sm:pt-0 animate-fade-overlay"
+      style={{
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}
       onClick={handleOverlayClick}
     >
       <div
-        className={`rounded-t-[28px] sm:rounded-[28px] w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden animate-slide-up ${
-          isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
+        className={`rounded-[28px] sm:rounded-[32px] w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden animate-modal-enter shadow-2xl ${
+          isDarkMode
+            ? "bg-[#1c1c1e] border border-white/10"
+            : "bg-white border border-black/12 shadow-sm"
         }`}
       >
         {/* Header */}
         <div
-          className={`shrink-0 p-6 border-b ${isDarkMode ? "border-white/10" : "border-black/5"}`}
+          className={`shrink-0 p-6 border-b ${isDarkMode ? "border-white/10" : "border-black/12"}`}
         >
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -103,7 +125,7 @@ export function DailyExpensePopup({
                 Daily Expenses
               </h2>
               <p
-                className={`text-[15px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                className={`text-[15px] ${isDarkMode ? "text-white/50" : "text-black/65"}`}
               >
                 {formattedDate}
               </p>
@@ -125,7 +147,7 @@ export function DailyExpensePopup({
 
           <div className="flex flex-col sm:flex-row gap-3 mt-4">
             {/* Total */}
-            <div className="bg-gradient-to-br from-[#007aff] to-[#0051d5] rounded-[16px] p-4 flex-1">
+            <div className="bg-gradient-to-br from-[#007aff] to-[#0051D5] rounded-[16px] p-4 flex-1">
               <p className="text-white/70 text-[13px] font-semibold mb-1">
                 Total Spent
               </p>
@@ -172,9 +194,10 @@ export function DailyExpensePopup({
                 return (
                   <div
                     key={expense.id}
-                    className={`rounded-[16px] p-4 flex items-center gap-3.5 ${
+                    className={`rounded-[16px] p-4 flex items-center gap-3.5 animate-slide-in-right ${
                       isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
                     }`}
+                    style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     <div
                       className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 shadow-sm`}
@@ -236,6 +259,7 @@ export function DailyExpensePopup({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

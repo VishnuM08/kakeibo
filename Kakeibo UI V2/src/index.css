@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 /*! tailwindcss v4.1.3 | MIT License | https://tailwindcss.com */
 @layer properties {
   @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or
@@ -195,16 +197,15 @@
 
   html {
     font-size: calc(16px * var(--app-scale));
-    height: 100%;
-    background-color: #f5f5f7;
+    min-height: 100%;
+    background-color: #efeff4;
     overflow-x: hidden;
   }
 
   body {
-    height: 100%;
+    min-height: 100%;
     background-color: inherit;
     line-height: inherit;
-    zoom: var(--app-scale);
   }
 
   html.dark {
@@ -2140,7 +2141,7 @@
     );
   }
 
-  .to-\[\#0051d5\] {
+  .to-\[\#0051D5\] {
     --tw-gradient-to: #0051d5;
     --tw-gradient-stops: var(
       --tw-gradient-via-stops,
@@ -3219,7 +3220,7 @@
   }
 
   @media (hover: hover) {
-    .hover\:bg-\[\#0051d5\]:hover {
+    .hover\:bg-\[\#0051D5\]:hover {
       background-color: #0051d5;
     }
   }
@@ -4237,7 +4238,51 @@ html {
   }
 }
 
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 @layer utilities {
+  /* Neo-Glassmorphism Utilities */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.04);
+  }
+
+  .dark .glass-card {
+    background: rgba(30, 30, 32, 0.4);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  }
+
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+  }
+
+  .dark .glass-panel {
+    background: rgba(25, 25, 28, 0.55);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
   /* Premium Smartphone Slider Styling */
   .custom-slider {
     -webkit-appearance: none;
@@ -4323,4 +4368,308 @@ html {
   .mb-safe {
     margin-bottom: env(safe-area-inset-bottom);
   }
+}
+
+/* Modal Entry Animation */
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-enter {
+  animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-overlay {
+  animation: fadeOverlay 0.3s ease forwards;
+}
+
+/* Staggered List Animations */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes slideUpStagger {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up-stagger {
+  animation: slideUpStagger 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+/* Premium Continuous Animations */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.1) 20%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 3s infinite;
+}
+
+@keyframes pulseRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 122, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 122, 255, 0);
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulseRing 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+/* ──────────────────────────────────────────────
+   Card & Button Hover Micro-Animations
+────────────────────────────────────────────── */
+
+/* Smooth lift on hover — apply to any card */
+.hover-lift {
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+html.dark .hover-lift:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Press scale — apply to buttons */
+.press-scale {
+  transition: transform 0.12s ease;
+}
+.press-scale:active {
+  transform: scale(0.96);
+}
+
+/* Icon spin on hover */
+.icon-spin-hover svg {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.icon-spin-hover:hover svg {
+  transform: rotate(20deg) scale(1.15);
+}
+
+/* ──────────────────────────────────────────────
+   Expense Row Entrance (stagger via nth-child)
+────────────────────────────────────────────── */
+@keyframes rowSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.expense-row {
+  animation: rowSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.expense-row:nth-child(1) {
+  animation-delay: 0s;
+}
+.expense-row:nth-child(2) {
+  animation-delay: 0.04s;
+}
+.expense-row:nth-child(3) {
+  animation-delay: 0.08s;
+}
+.expense-row:nth-child(4) {
+  animation-delay: 0.12s;
+}
+.expense-row:nth-child(5) {
+  animation-delay: 0.16s;
+}
+.expense-row:nth-child(6) {
+  animation-delay: 0.2s;
+}
+.expense-row:nth-child(7) {
+  animation-delay: 0.24s;
+}
+.expense-row:nth-child(8) {
+  animation-delay: 0.28s;
+}
+.expense-row:nth-child(9) {
+  animation-delay: 0.32s;
+}
+.expense-row:nth-child(10) {
+  animation-delay: 0.36s;
+}
+
+/* ──────────────────────────────────────────────
+   Blue Add Button Glow Pulse
+────────────────────────────────────────────── */
+@keyframes addButtonGlow {
+  0% {
+    box-shadow: 0 4px 15px rgba(0, 122, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 6px 28px rgba(0, 122, 255, 0.6);
+  }
+  100% {
+    box-shadow: 0 4px 15px rgba(0, 122, 255, 0.35);
+  }
+}
+.add-btn-glow {
+  animation: addButtonGlow 3s ease-in-out infinite;
+}
+
+/* ──────────────────────────────────────────────
+   Number counter flip (for stat values)
+────────────────────────────────────────────── */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.stat-value {
+  animation: countUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.2s;
+}
+
+/* ──────────────────────────────────────────────
+   Skeleton shimmer (loading placeholders)
+────────────────────────────────────────────── */
+@keyframes skeletonWave {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.06) 25%,
+    rgba(0, 0, 0, 0.03) 50%,
+    rgba(0, 0, 0, 0.06) 75%
+  );
+  background-size: 200px 100%;
+  animation: skeletonWave 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+html.dark .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 25%,
+    rgba(255, 255, 255, 0.03) 50%,
+    rgba(255, 255, 255, 0.06) 75%
+  );
+  background-size: 200px 100%;
+}
+
+/* Custom Scrollbar for Modals */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(134, 134, 139, 0.3);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(134, 134, 139, 0.5);
+}
+
+/* Safe Area Spacing */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }

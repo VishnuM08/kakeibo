@@ -125,7 +125,7 @@ export function AuthScreen({
       <div className="w-full max-w-md my-auto py-8">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051d5] flex items-center justify-center mx-auto mb-6 shadow-lg">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051D5] flex items-center justify-center mx-auto mb-6 shadow-lg">
             <Lock className="w-10 h-10 text-white" strokeWidth={2.5} />
           </div>
           <h1
