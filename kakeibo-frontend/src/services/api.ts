@@ -129,11 +129,10 @@ import { Preferences } from "@capacitor/preferences";
 import { Capacitor } from "@capacitor/core";
 import { ENV } from "../config/env";
 
-// When running in a browser (web), use the /api proxy to avoid CORS issues.
-// When running on native devices, use the full URL.
+// When running in a browser (web), use the /api proxy to avoid CORS issues in development.
+// When running on native devices or in production, use the full URL.
 const isNative = Capacitor.isNativePlatform();
-const baseURL = isNative ? ENV.API_BASE_URL : "/api";
-//const baseURL = "http://localhost:8080";
+const baseURL = isNative || ENV.IS_PROD ? ENV.API_BASE_URL : "/api";
 const api = axios.create({
   baseURL: baseURL,
   timeout: 10000,
