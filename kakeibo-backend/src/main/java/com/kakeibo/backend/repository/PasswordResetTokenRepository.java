@@ -22,5 +22,9 @@ public interface PasswordResetTokenRepository
 
     Optional<PasswordResetToken> findByTokenHashAndUsedFalse(String tokenHash);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM PasswordResetToken t WHERE t.user = :user")
+    void deleteByUser(com.kakeibo.backend.entity.User user);
 
 }

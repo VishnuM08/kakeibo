@@ -45,6 +45,10 @@ public class SecurityConfig {
                                 "/auth/reset-password",
                                 "/auth/verify-otp",
 
+                                // Account deletion (public - user may not have valid JWT)
+                                "/account/delete/request",
+                                "/account/delete/confirm",
+
                                 // ✅ Actuator (ALL, not just health)
                                 "/actuator/**",
 

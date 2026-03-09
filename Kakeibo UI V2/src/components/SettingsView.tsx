@@ -11,11 +11,13 @@ import {
   ChevronRight,
   X,
   PlayCircle,
+  UserMinus,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { Preferences } from "@capacitor/preferences";
 import { motion, AnimatePresence } from "motion/react";
+import { DeleteAccountModal } from "./DeleteAccountModal";
 //import { logout } from '../services/api';
 
 /**
@@ -56,6 +58,7 @@ export function SettingsView({
   onSetDisplayScale,
 }: SettingsViewProps) {
   const [showSetupPIN, setShowSetupPIN] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [newPIN, setNewPIN] = useState("");
   const [confirmPIN, setConfirmPIN] = useState("");
   const [pinError, setPinError] = useState("");
@@ -133,6 +136,9 @@ export function SettingsView({
     }, 300);
   };
 
+  console.log("SettingsView renders. showDeleteAccount is:", showDeleteAccount);
+
+  // Desktop sections content
   const sectionContent = (
     <div
       style={{
@@ -204,6 +210,20 @@ export function SettingsView({
           }}
         >
           {[
+            {
+              title: "Account",
+              subtitle: "Manage your account",
+              items: [
+                {
+                  icon: UserMinus,
+                  label: "Delete Account",
+                  sub: "Permanently remove your data",
+                  labelColor: "#ff3b30",
+                  badge: null,
+                  action: () => setShowDeleteAccount(true),
+                },
+              ],
+            },
             {
               title: "Security",
               subtitle: "Protect your financial data",
@@ -501,6 +521,21 @@ export function SettingsView({
     </div>
   );
 
+  // Delete Account Modal (shared)
+  const deleteAccountModal = (
+    <DeleteAccountModal
+      isOpen={showDeleteAccount}
+      onClose={() => setShowDeleteAccount(false)}
+      userEmail={userEmail}
+      isDarkMode={isDarkMode}
+      themeMode={themeMode}
+      onSuccess={() => {
+        setShowDeleteAccount(false);
+        handleLogout();
+      }}
+    />
+  );
+
   // PIN modal (shared)
   const pinModal = showSetupPIN && (
     <div
@@ -751,6 +786,7 @@ export function SettingsView({
           </div>
         </div>
         {pinModal}
+        {deleteAccountModal}
       </>
     );
   }
@@ -765,561 +801,611 @@ export function SettingsView({
   const borderStyle = `1px solid ${themeMode === "oled" ? "rgba(255,255,255,0.15)" : isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)"}`;
 
   return (
-    <motion.div
-      className="fixed inset-0 z-50 overflow-y-auto animate-modal-enter transition-colors duration-300 custom-scrollbar shadow-2xl"
-      style={{ background: mobileBg }}
-    >
-      <div
-        className="max-w-lg mx-auto px-6 pb-24 safe-top"
-        style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)" }}
+    <>
+      <motion.div
+        className="fixed inset-0 z-50 overflow-y-auto animate-modal-enter transition-colors duration-300 custom-scrollbar shadow-2xl"
+        style={{ background: mobileBg }}
       >
-        {/* Drag Handle (Mobile only) */}
-        <div className="w-12 h-1.5 bg-gray-300/30 dark:bg-gray-600/30 rounded-full mx-auto mb-6 mt-[-10px] sm:hidden" />
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={onClose}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-              isDarkMode
-                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
-                : "bg-white hover:bg-[#e5e5e7]"
-            }`}
-          >
-            <ArrowLeft className={`w-5 h-5 ${textColor}`} strokeWidth={2.5} />
-          </button>
-          <h1 className={`text-[28px] font-bold flex-1 ${textColor}`}>
-            Settings
-          </h1>
-        </div>
-
-        {/* User Profile Card */}
         <div
-          className={`rounded-[20px] p-5 mb-5 shadow-sm transition-colors`}
-          style={{ background: cardBg, border: borderStyle }}
+          className="max-w-lg mx-auto px-6 pb-24 safe-top"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)" }}
         >
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051D5] flex items-center justify-center">
-              <User className="w-8 h-8 text-white" strokeWidth={2.5} />
+          {/* Drag Handle (Mobile only) */}
+          <div className="w-12 h-1.5 bg-gray-300/30 dark:bg-gray-600/30 rounded-full mx-auto mb-6 mt-[-10px] sm:hidden" />
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={onClose}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                isDarkMode
+                  ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
+                  : "bg-white hover:bg-[#e5e5e7]"
+              }`}
+            >
+              <ArrowLeft className={`w-5 h-5 ${textColor}`} strokeWidth={2.5} />
+            </button>
+            <h1 className={`text-[28px] font-bold flex-1 ${textColor}`}>
+              Settings
+            </h1>
+          </div>
+
+          {/* User Profile Card */}
+          <div
+            className={`rounded-[20px] p-5 mb-5 shadow-sm transition-colors`}
+            style={{ background: cardBg, border: borderStyle }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051D5] flex items-center justify-center">
+                <User className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="flex-1">
+                <h3 className={`text-[20px] font-bold ${textColor}`}>
+                  {userName}
+                </h3>
+                <p className={`text-[15px] ${subTextColor}`}>{userEmail}</p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className={`text-[20px] font-bold ${textColor}`}>
-                {userName}
+          </div>
+
+          {/* Account Settings */}
+          <div
+            className={`rounded-[20px] overflow-hidden mb-5 shadow-sm transition-colors`}
+            style={{ background: cardBg, border: borderStyle }}
+          >
+            <div className="px-5 py-4">
+              <h3 className={`text-[17px] font-bold mb-1 ${textColor}`}>
+                Account
               </h3>
-              <p className={`text-[15px] ${subTextColor}`}>{userEmail}</p>
+              <p className={`text-[13px] ${subTextColor}`}>
+                Manage your account
+              </p>
             </div>
-          </div>
-        </div>
 
-        {/* Security Settings */}
-        <div
-          className={`rounded-[20px] overflow-hidden mb-5 shadow-sm transition-colors`}
-          style={{ background: cardBg, border: borderStyle }}
-        >
-          <div className="px-5 py-4">
-            <h3 className={`text-[17px] font-bold mb-1 ${textColor}`}>
-              Security
-            </h3>
-            <p className={`text-[13px] ${subTextColor}`}>
-              Protect your financial data
-            </p>
-          </div>
-
-          {/* PIN Lock Toggle */}
-          <button
-            onClick={() =>
-              isPINEnabled ? handleDisablePIN() : setShowSetupPIN(true)
-            }
-            className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t`}
-            style={{ borderTop: borderStyle }}
-          >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
+            <button
+              onClick={() => setShowDeleteAccount(true)}
+              className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
+                isDarkMode
+                  ? "hover:bg-white/5 border-white/10"
+                  : "hover:bg-black/5 border-black/5"
               }`}
+              style={{ borderTop: borderStyle }}
             >
-              <Lock
-                className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-                strokeWidth={2.5}
-              />
-            </div>
-            <div className="flex-1 text-left">
-              <p
-                className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isDarkMode ? "bg-red-500/20" : "bg-red-50"
+                }`}
               >
-                PIN Lock
-              </p>
-              <p
-                className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-              >
-                {isPINEnabled ? "Enabled" : "Disabled"}
-              </p>
-            </div>
-            <div
-              className={`px-3 py-1 rounded-full text-[13px] font-semibold ${
-                isPINEnabled
-                  ? "bg-green-500/20 text-green-500"
-                  : "bg-red-500/20 text-red-500"
-              }`}
-            >
-              {isPINEnabled ? "ON" : "OFF"}
-            </div>
-          </button>
-
-          {/* Biometric (Placeholder) */}
-          <button
-            className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
-              isDarkMode
-                ? "hover:bg-white/5 border-white/10"
-                : "hover:bg-black/5 border-black/5"
-            }`}
-          >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
-              }`}
-            >
-              <Shield
-                className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-                strokeWidth={2.5}
-              />
-            </div>
-            <div className="flex-1 text-left">
-              <p
-                className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
-              >
-                Face ID / Touch ID
-              </p>
-              <p
-                className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-              >
-                Coming soon
-              </p>
-            </div>
-            <ChevronRight
-              className={`w-5 h-5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}
-            />
-          </button>
-        </div>
-
-        {/* Appearance Settings */}
-        <div
-          className={`rounded-[20px] overflow-hidden mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
-        >
-          <div className="px-5 py-4">
-            <h3
-              className={`text-[17px] font-bold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}
-            >
-              Appearance
-            </h3>
+                <UserMinus className="w-5 h-5 text-red-500" strokeWidth={2.5} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className={`text-[17px] font-semibold text-red-500`}>
+                  Delete Account
+                </p>
+                <p
+                  className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                >
+                  Permanently remove your data
+                </p>
+              </div>
+            </button>
           </div>
 
-          {/* Dark Mode Toggle */}
-          <button
-            onClick={async () => {
-              await Haptics.impact({ style: ImpactStyle.Light });
-              onToggleDarkMode();
-            }}
-            className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
-              isDarkMode
-                ? "hover:bg-white/5 border-white/10"
-                : "hover:bg-black/5 border-black/5"
-            }`}
+          {/* Security Settings */}
+          <div
+            className={`rounded-[20px] overflow-hidden mb-5 shadow-sm transition-colors`}
+            style={{ background: cardBg, border: borderStyle }}
           >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
-              }`}
+            <div className="px-5 py-4">
+              <h3 className={`text-[17px] font-bold mb-1 ${textColor}`}>
+                Security
+              </h3>
+              <p className={`text-[13px] ${subTextColor}`}>
+                Protect your financial data
+              </p>
+            </div>
+
+            {/* PIN Lock Toggle */}
+            <button
+              onClick={() =>
+                isPINEnabled ? handleDisablePIN() : setShowSetupPIN(true)
+              }
+              className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t`}
+              style={{ borderTop: borderStyle }}
             >
-              <Palette
-                className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-                strokeWidth={2.5}
-              />
-            </div>
-            <div className="flex-1 text-left">
-              <p
-                className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
+                }`}
               >
-                Dark Mode
-              </p>
-              <p
-                className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                <Lock
+                  className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                  strokeWidth={2.5}
+                />
+              </div>
+              <div className="flex-1 text-left">
+                <p
+                  className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+                >
+                  PIN Lock
+                </p>
+                <p
+                  className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                >
+                  {isPINEnabled ? "Enabled" : "Disabled"}
+                </p>
+              </div>
+              <div
+                className={`px-3 py-1 rounded-full text-[13px] font-semibold ${
+                  isPINEnabled
+                    ? "bg-green-500/20 text-green-500"
+                    : "bg-red-500/20 text-red-500"
+                }`}
               >
-                {isDarkMode ? "On" : "Off"}
-              </p>
-            </div>
-            <div
-              className={`w-12 h-7 rounded-full transition-colors ${
-                isDarkMode ? "bg-[#34c759]" : "bg-black/20"
+                {isPINEnabled ? "ON" : "OFF"}
+              </div>
+            </button>
+
+            {/* Biometric (Placeholder) */}
+            <button
+              className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
+                isDarkMode
+                  ? "hover:bg-white/5 border-white/10"
+                  : "hover:bg-black/5 border-black/5"
               }`}
             >
               <div
-                className={`w-5 h-5 rounded-full bg-white transition-transform mt-1 ${
-                  isDarkMode ? "ml-6" : "ml-1"
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
                 }`}
+              >
+                <Shield
+                  className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                  strokeWidth={2.5}
+                />
+              </div>
+              <div className="flex-1 text-left">
+                <p
+                  className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+                >
+                  Face ID / Touch ID
+                </p>
+                <p
+                  className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                >
+                  Coming soon
+                </p>
+              </div>
+              <ChevronRight
+                className={`w-5 h-5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}
               />
-            </div>
-          </button>
+            </button>
+          </div>
 
-          {/* Restart Tour Button */}
-          <button
-            onClick={async () => {
-              await Haptics.impact({ style: ImpactStyle.Light });
-              handleRestartTour();
-            }}
-            className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
-              isDarkMode
-                ? "hover:bg-white/5 border-white/10"
-                : "hover:bg-black/5 border-black/5"
-            }`}
+          {/* Appearance Settings */}
+          <div
+            className={`rounded-[20px] overflow-hidden mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
           >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
+            <div className="px-5 py-4">
+              <h3
+                className={`text-[17px] font-bold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}
+              >
+                Appearance
+              </h3>
+            </div>
+
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={async () => {
+                await Haptics.impact({ style: ImpactStyle.Light });
+                onToggleDarkMode();
+              }}
+              className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
+                isDarkMode
+                  ? "hover:bg-white/5 border-white/10"
+                  : "hover:bg-black/5 border-black/5"
               }`}
             >
-              <PlayCircle
-                className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-                strokeWidth={2.5}
-              />
-            </div>
-            <div className="flex-1 text-left">
-              <p
-                className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
+                }`}
               >
-                Restart App Tour
-              </p>
+                <Palette
+                  className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                  strokeWidth={2.5}
+                />
+              </div>
+              <div className="flex-1 text-left">
+                <p
+                  className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+                >
+                  Dark Mode
+                </p>
+                <p
+                  className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                >
+                  {isDarkMode ? "On" : "Off"}
+                </p>
+              </div>
+              <div
+                className={`w-12 h-7 rounded-full transition-colors ${
+                  isDarkMode ? "bg-[#34c759]" : "bg-black/20"
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full bg-white transition-transform mt-1 ${
+                    isDarkMode ? "ml-6" : "ml-1"
+                  }`}
+                />
+              </div>
+            </button>
+
+            {/* Restart Tour Button */}
+            <button
+              onClick={async () => {
+                await Haptics.impact({ style: ImpactStyle.Light });
+                handleRestartTour();
+              }}
+              className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
+                isDarkMode
+                  ? "hover:bg-white/5 border-white/10"
+                  : "hover:bg-black/5 border-black/5"
+              }`}
+            >
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
+                }`}
+              >
+                <PlayCircle
+                  className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                  strokeWidth={2.5}
+                />
+              </div>
+              <div className="flex-1 text-left">
+                <p
+                  className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+                >
+                  Restart App Tour
+                </p>
+                <p
+                  className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                >
+                  Replays the welcome walkthrough
+                </p>
+              </div>
+              <ChevronRight
+                className={`w-5 h-5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}
+              />
+            </button>
+          </div>
+
+          {/* Display Settings */}
+          <div
+            className={`rounded-[20px] overflow-hidden mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
+          >
+            <div className="px-5 py-4">
+              <h3
+                className={`text-[17px] font-bold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}
+              >
+                Display size
+              </h3>
               <p
                 className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
               >
-                Replays the welcome walkthrough
+                Adjust overall application size
               </p>
             </div>
-            <ChevronRight
-              className={`w-5 h-5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}
-            />
-          </button>
-        </div>
 
-        {/* Display Settings */}
-        <div
-          className={`rounded-[20px] overflow-hidden mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
-        >
-          <div className="px-5 py-4">
-            <h3
-              className={`text-[17px] font-bold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}
+            <div
+              className={`px-5 py-6 space-y-6 border-t ${
+                isDarkMode ? "border-white/10" : "border-black/5"
+              }`}
             >
-              Display size
-            </h3>
-            <p
-              className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-            >
-              Adjust overall application size
-            </p>
-          </div>
-
-          <div
-            className={`px-5 py-6 space-y-6 border-t ${
-              isDarkMode ? "border-white/10" : "border-black/5"
-            }`}
-          >
-            {/* Range Slider Container */}
-            <div className="space-y-6">
-              <div className="flex justify-between items-end mb-1 px-1">
-                <span
-                  className={`text-[12px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}
-                >
-                  A
-                </span>
-                <span
-                  className={`text-[15px] font-bold ${isDarkMode ? "text-white/70" : "text-black/70"}`}
-                >
-                  Default
-                </span>
-                <span
-                  className={`text-[20px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}
-                >
-                  A
-                </span>
-              </div>
-
-              <div className="relative pt-2 pb-6 flex flex-col items-center">
-                {/* Visual Tick Marks */}
-                <div className="absolute top-0 left-0 right-0 flex justify-between px-[14px]">
-                  {[0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3].map((val) => (
-                    <div
-                      key={val}
-                      className={`w-[1px] h-2 rounded-full ${
-                        isDarkMode ? "bg-white/20" : "bg-black/10"
-                      } ${val === 1.0 ? (isDarkMode ? "h-3 bg-white/40" : "h-3 bg-black/30") : ""}`}
-                    />
-                  ))}
+              {/* Range Slider Container */}
+              <div className="space-y-6">
+                <div className="flex justify-between items-end mb-1 px-1">
+                  <span
+                    className={`text-[12px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                  >
+                    A
+                  </span>
+                  <span
+                    className={`text-[15px] font-bold ${isDarkMode ? "text-white/70" : "text-black/70"}`}
+                  >
+                    Default
+                  </span>
+                  <span
+                    className={`text-[20px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                  >
+                    A
+                  </span>
                 </div>
 
-                <input
-                  type="range"
-                  min="0.7"
-                  max="1.3"
-                  step="0.1"
-                  value={displayScale}
-                  onChange={async (e) => {
-                    const newValue = parseFloat(e.target.value);
-                    if (newValue !== displayScale) {
-                      await Haptics.impact({ style: ImpactStyle.Light });
-                      onSetDisplayScale(newValue);
-                    }
-                  }}
-                  onBlur={async () => {
-                    await Preferences.set({
-                      key: "kakeibo_display_scale",
-                      value: displayScale.toString(),
-                    });
-                  }}
-                  className="custom-slider"
-                />
-              </div>
+                <div className="relative pt-2 pb-6 flex flex-col items-center">
+                  {/* Visual Tick Marks */}
+                  <div className="absolute top-0 left-0 right-0 flex justify-between px-[14px]">
+                    {[0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3].map((val) => (
+                      <div
+                        key={val}
+                        className={`w-[1px] h-2 rounded-full ${
+                          isDarkMode ? "bg-white/20" : "bg-black/10"
+                        } ${val === 1.0 ? (isDarkMode ? "h-3 bg-white/40" : "h-3 bg-black/30") : ""}`}
+                      />
+                    ))}
+                  </div>
 
-              <div className="flex justify-between items-center px-1">
-                <p
-                  className={`text-[14px] font-semibold ${isDarkMode ? "text-white/60" : "text-black/60"}`}
-                >
-                  {Math.round(displayScale * 100)}%
-                </p>
-                {displayScale !== 1.0 && (
-                  <button
-                    onClick={async () => {
-                      onSetDisplayScale(1.0);
+                  <input
+                    type="range"
+                    min="0.7"
+                    max="1.3"
+                    step="0.1"
+                    value={displayScale}
+                    onChange={async (e) => {
+                      const newValue = parseFloat(e.target.value);
+                      if (newValue !== displayScale) {
+                        await Haptics.impact({ style: ImpactStyle.Light });
+                        onSetDisplayScale(newValue);
+                      }
+                    }}
+                    onBlur={async () => {
                       await Preferences.set({
                         key: "kakeibo_display_scale",
-                        value: "1.0",
+                        value: displayScale.toString(),
                       });
                     }}
-                    className="text-[13px] font-bold text-[#007aff] px-3 py-1.5 rounded-full bg-[#007aff]/10 active:scale-95 transition-transform"
+                    className="custom-slider"
+                  />
+                </div>
+
+                <div className="flex justify-between items-center px-1">
+                  <p
+                    className={`text-[14px] font-semibold ${isDarkMode ? "text-white/60" : "text-black/60"}`}
                   >
-                    Reset to Default
-                  </button>
-                )}
+                    {Math.round(displayScale * 100)}%
+                  </p>
+                  {displayScale !== 1.0 && (
+                    <button
+                      onClick={async () => {
+                        onSetDisplayScale(1.0);
+                        await Preferences.set({
+                          key: "kakeibo_display_scale",
+                          value: "1.0",
+                        });
+                      }}
+                      className="text-[13px] font-bold text-[#007aff] px-3 py-1.5 rounded-full bg-[#007aff]/10 active:scale-95 transition-transform"
+                    >
+                      Reset to Default
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Data & Storage */}
-        <div
-          className={`rounded-[20px] overflow-hidden mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
-        >
-          <div className="px-5 py-4">
-            <h3
-              className={`text-[17px] font-bold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}
+          {/* Data & Storage */}
+          <div
+            className={`rounded-[20px] overflow-hidden mb-5 shadow-sm ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
+          >
+            <div className="px-5 py-4">
+              <h3
+                className={`text-[17px] font-bold mb-1 ${isDarkMode ? "text-white" : "text-black"}`}
+              >
+                Data & Storage
+              </h3>
+              <p
+                className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+              >
+                Offline mode & sync settings
+              </p>
+            </div>
+
+            {/* Sync Status */}
+            <div
+              className={`px-5 py-4 flex items-center gap-3 border-t ${
+                isDarkMode ? "border-white/10" : "border-black/5"
+              }`}
             >
-              Data & Storage
-            </h3>
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
+                }`}
+              >
+                <Database
+                  className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                  strokeWidth={2.5}
+                />
+              </div>
+              <div className="flex-1">
+                <p
+                  className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+                >
+                  Offline Mode
+                </p>
+                <p
+                  className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                >
+                  Data synced with server when online
+                </p>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-green-500/20">
+                <p className="text-[13px] font-semibold text-green-500">
+                  Active
+                </p>
+              </div>
+            </div>
+
+            {/* Clear Local Data */}
+            <button
+              onClick={handleClearData}
+              className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
+                isDarkMode
+                  ? "hover:bg-white/5 border-white/10"
+                  : "hover:bg-black/5 border-black/5"
+              }`}
+            >
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isDarkMode ? "bg-red-500/20" : "bg-red-50"
+                }`}
+              >
+                <Trash2 className="w-5 h-5 text-red-500" strokeWidth={2.5} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className={`text-[17px] font-semibold text-red-500`}>
+                  Clear Local Data
+                </p>
+                <p
+                  className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                >
+                  Remove all cached data
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className={`w-full py-[15px] px-6 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.97] font-semibold text-[17px] ${
+              isDarkMode
+                ? "bg-red-500/20 hover:bg-red-500/30 text-red-400"
+                : "bg-red-50 hover:bg-red-100 text-red-600"
+            }`}
+          >
+            <LogOut className="w-5 h-5" strokeWidth={2.5} />
+            <span>Logout</span>
+          </button>
+
+          {/* App Version */}
+          <div className="mt-6 text-center space-y-1">
             <p
-              className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+              className={`text-[11px] ${
+                isDarkMode ? "text-white/50" : "text-black/70"
+              }`}
             >
-              Offline mode & sync settings
+              © 2026 Aignite Technologies. All rights reserved.
+            </p>
+            <p
+              className={`text-[11px] ${
+                isDarkMode ? "text-white/40" : "text-black/55"
+              }`}
+            >
+              Designed and engineered by Lavish.
             </p>
           </div>
-
-          {/* Sync Status */}
-          <div
-            className={`px-5 py-4 flex items-center gap-3 border-t ${
-              isDarkMode ? "border-white/10" : "border-black/5"
-            }`}
-          >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
-              }`}
-            >
-              <Database
-                className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-                strokeWidth={2.5}
-              />
-            </div>
-            <div className="flex-1">
-              <p
-                className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
-              >
-                Offline Mode
-              </p>
-              <p
-                className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-              >
-                Data synced with server when online
-              </p>
-            </div>
-            <div className="px-3 py-1 rounded-full bg-green-500/20">
-              <p className="text-[13px] font-semibold text-green-500">Active</p>
-            </div>
-          </div>
-
-          {/* Clear Local Data */}
-          <button
-            onClick={handleClearData}
-            className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
-              isDarkMode
-                ? "hover:bg-white/5 border-white/10"
-                : "hover:bg-black/5 border-black/5"
-            }`}
-          >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                isDarkMode ? "bg-red-500/20" : "bg-red-50"
-              }`}
-            >
-              <Trash2 className="w-5 h-5 text-red-500" strokeWidth={2.5} />
-            </div>
-            <div className="flex-1 text-left">
-              <p className={`text-[17px] font-semibold text-red-500`}>
-                Clear Local Data
-              </p>
-              <p
-                className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-              >
-                Remove all cached data
-              </p>
-            </div>
-          </button>
         </div>
 
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className={`w-full py-[15px] px-6 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.97] font-semibold text-[17px] ${
-            isDarkMode
-              ? "bg-red-500/20 hover:bg-red-500/30 text-red-400"
-              : "bg-red-50 hover:bg-red-100 text-red-600"
-          }`}
-        >
-          <LogOut className="w-5 h-5" strokeWidth={2.5} />
-          <span>Logout</span>
-        </button>
-
-        {/* App Version */}
-        <div className="mt-6 text-center space-y-1">
-          <p
-            className={`text-[11px] ${
-              isDarkMode ? "text-white/50" : "text-black/70"
-            }`}
-          >
-            © 2026 Aignite Technologies. All rights reserved.
-          </p>
-          <p
-            className={`text-[11px] ${
-              isDarkMode ? "text-white/40" : "text-black/55"
-            }`}
-          >
-            Designed and engineered by Lavish.
-          </p>
-        </div>
-      </div>
-
-      {/* Setup PIN Modal */}
-      {showSetupPIN && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-5">
-          {/* Absolute Backdrop Layer */}
-          <div
-            className="absolute inset-0 bg-black/60"
-            style={{
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-            }}
-            onClick={() => {
-              setShowSetupPIN(false);
-              setNewPIN("");
-              setConfirmPIN("");
-              setPinError("");
-            }}
-          />
-          <div
-            className={`relative z-10 rounded-[28px] w-full max-w-md p-6 ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
-          >
-            <h3
-              className={`text-[24px] font-bold mb-6 ${isDarkMode ? "text-white" : "text-black"}`}
+        {/* Setup PIN Modal */}
+        {showSetupPIN && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center px-5">
+            {/* Absolute Backdrop Layer */}
+            <div
+              className="absolute inset-0 bg-black/60"
+              style={{
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+              }}
+              onClick={() => {
+                setShowSetupPIN(false);
+                setNewPIN("");
+                setConfirmPIN("");
+                setPinError("");
+              }}
+            />
+            <div
+              className={`relative z-10 rounded-[28px] w-full max-w-md p-6 ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
             >
-              Setup PIN Lock
-            </h3>
+              <h3
+                className={`text-[24px] font-bold mb-6 ${isDarkMode ? "text-white" : "text-black"}`}
+              >
+                Setup PIN Lock
+              </h3>
 
-            <div className="space-y-4">
-              <div>
-                <label
-                  className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
-                >
-                  Enter 4-digit PIN
-                </label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={newPIN}
-                  onChange={(e) => setNewPIN(e.target.value.replace(/\D/g, ""))}
-                  placeholder="••••"
-                  className={`w-full px-4 py-3.5 rounded-[12px] text-[24px] text-center tracking-[0.5em] focus:outline-none focus:ring-2 ${
-                    isDarkMode
-                      ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
-                      : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
-                  }`}
-                />
-              </div>
+              <div className="space-y-4">
+                <div>
+                  <label
+                    className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
+                  >
+                    Enter 4-digit PIN
+                  </label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={newPIN}
+                    onChange={(e) =>
+                      setNewPIN(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder="••••"
+                    className={`w-full px-4 py-3.5 rounded-[12px] text-[24px] text-center tracking-[0.5em] focus:outline-none focus:ring-2 ${
+                      isDarkMode
+                        ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
+                        : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
+                    }`}
+                  />
+                </div>
 
-              <div>
-                <label
-                  className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
-                >
-                  Confirm PIN
-                </label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={confirmPIN}
-                  onChange={(e) =>
-                    setConfirmPIN(e.target.value.replace(/\D/g, ""))
-                  }
-                  placeholder="••••"
-                  className={`w-full px-4 py-3.5 rounded-[12px] text-[24px] text-center tracking-[0.5em] focus:outline-none focus:ring-2 ${
-                    isDarkMode
-                      ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
-                      : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
-                  }`}
-                />
-              </div>
+                <div>
+                  <label
+                    className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
+                  >
+                    Confirm PIN
+                  </label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={confirmPIN}
+                    onChange={(e) =>
+                      setConfirmPIN(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder="••••"
+                    className={`w-full px-4 py-3.5 rounded-[12px] text-[24px] text-center tracking-[0.5em] focus:outline-none focus:ring-2 ${
+                      isDarkMode
+                        ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
+                        : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
+                    }`}
+                  />
+                </div>
 
-              {pinError && (
-                <p className="text-red-500 text-[15px] font-medium">
-                  {pinError}
-                </p>
-              )}
+                {pinError && (
+                  <p className="text-red-500 text-[15px] font-medium">
+                    {pinError}
+                  </p>
+                )}
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => {
-                    setShowSetupPIN(false);
-                    setNewPIN("");
-                    setConfirmPIN("");
-                    setPinError("");
-                  }}
-                  className={`flex-1 py-3 rounded-[12px] font-semibold text-[17px] ${
-                    isDarkMode
-                      ? "bg-[#2c2c2e] text-white"
-                      : "bg-[#f5f5f7] text-black"
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSetupPIN}
-                  className={`flex-1 py-3 rounded-[12px] font-semibold text-[17px] ${
-                    isDarkMode ? "bg-white text-black" : "bg-black text-white"
-                  }`}
-                >
-                  Enable
-                </button>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setShowSetupPIN(false);
+                      setNewPIN("");
+                      setConfirmPIN("");
+                      setPinError("");
+                    }}
+                    className={`flex-1 py-3 rounded-[12px] font-semibold text-[17px] ${
+                      isDarkMode
+                        ? "bg-[#2c2c2e] text-white"
+                        : "bg-[#f5f5f7] text-black"
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSetupPIN}
+                    className={`flex-1 py-3 rounded-[12px] font-semibold text-[17px] ${
+                      isDarkMode ? "bg-white text-black" : "bg-black text-white"
+                    }`}
+                  >
+                    Enable
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </motion.div>
+        )}
+      </motion.div>
+      {deleteAccountModal}
+    </>
   );
 }

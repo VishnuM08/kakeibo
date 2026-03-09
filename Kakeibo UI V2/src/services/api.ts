@@ -289,6 +289,19 @@ export async function resetPassword(token: string, newPassword: string) {
 }
 
 /**
+ * Account Deletion APIs
+ */
+export async function requestAccountDeletion(email: string) {
+  const response = await api.post("/account/delete/request", { email });
+  return response.data;
+}
+
+export async function confirmAccountDeletion(email: string, otp: string) {
+  const response = await api.post("/account/delete/confirm", { email, otp });
+  return response.data;
+}
+
+/**
  * Logout API
  * TODO: BACKEND INTEGRATION - POST /api/auth/logout
  */

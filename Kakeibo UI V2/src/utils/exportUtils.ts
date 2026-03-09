@@ -10,6 +10,9 @@ import {
 import { BackendExpense } from "../types/BackendExpense";
 import { UIExpense } from "../types/UIExpense";
 import logoUrl from "../components/Images/logo-app.png";
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 
 export async function exportToCSV(
   expenses: UIExpense[],
@@ -168,14 +171,32 @@ export async function exportToCSV(
 </body>
 </html>`;
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `${filename}.html`;
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const result = await Filesystem.writeFile({
+        path: `${filename}.html`,
+        data: html,
+        directory: Directory.Cache,
+        encoding: Encoding.UTF8,
+      });
+      await Share.share({
+        title: "Kakeibo Export",
+        url: result.uri,
+        dialogTitle: "Share Export",
+      });
+    } catch (e) {
+      console.error("Native export failed", e);
+    }
+  } else {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}.html`;
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 }
 
 /**
@@ -185,22 +206,40 @@ export async function exportToCSV(
  * TODO: BACKEND INTEGRATION
  * - Backend endpoint: GET /api/expenses/export?format=json
  */
-export function exportToJSON(
+export async function exportToJSON(
   expenses: UIExpense[],
   filename: string = "expenses.json",
-): void {
+): Promise<void> {
   const jsonContent = JSON.stringify(expenses, null, 2);
 
-  const blob = new Blob([jsonContent], { type: "application/json" });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const result = await Filesystem.writeFile({
+        path: filename,
+        data: jsonContent,
+        directory: Directory.Cache,
+        encoding: Encoding.UTF8,
+      });
+      await Share.share({
+        title: "Kakeibo JSON Export",
+        url: result.uri,
+        dialogTitle: "Share JSON Export",
+      });
+    } catch (e) {
+      console.error("Native JSON export failed", e);
+    }
+  } else {
+    const blob = new Blob([jsonContent], { type: "application/json" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
 
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 }
 
 /**

@@ -95,6 +95,69 @@ Kakeibo • Aignite Technologies
         sendHtmlEmail(to, subject, body);
     }
 
+    // Account Deletion OTP Email
+    public void sendAccountDeletionOtpEmail(String to, String otp) {
+
+        String subject = "Kakeibo Account Deletion Request";
+
+        String formattedOtp = otp.replaceAll("(.{3})", "$1 ").trim();
+
+        String body = """
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; background-color:#f4f6f8; padding:20px;">
+
+<div style="max-width:500px; margin:auto; background:white; padding:30px; border-radius:10px; text-align:center;">
+
+<h2 style="color:#e74c3c;">Account Deletion Request</h2>
+
+<p style="color:#555; font-size:15px;">
+We received a request to permanently delete your Kakeibo account.<br>
+Use the code below to confirm this action.
+</p>
+
+<div style="margin:30px 0;">
+<span style="
+font-size:32px;
+font-weight:bold;
+letter-spacing:6px;
+color:#2c3e50;
+background:#f2f2f2;
+padding:12px 20px;
+border-radius:6px;
+display:inline-block;
+">
+%s
+</span>
+</div>
+
+<p style="color:#e74c3c; font-size:14px; font-weight:bold;">
+⚠️ This will permanently delete your account and all associated data.
+</p>
+
+<p style="color:#777; font-size:14px;">
+This code will expire in <b>10 minutes</b>.
+</p>
+
+<p style="color:#999; font-size:13px;">
+If you did not request account deletion, please secure your account immediately.
+</p>
+
+<hr style="margin:30px 0;">
+
+<p style="font-size:12px; color:#aaa;">
+Kakeibo • Aignite Technologies
+</p>
+
+</div>
+
+</body>
+</html>
+""".formatted(formattedOtp);
+
+        sendHtmlEmail(to, subject, body);
+    }
+
     // HTML Email Sender
     @Async
     public void sendHtmlEmail(String to, String subject, String body) {
