@@ -4,15 +4,17 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.io.Serializable;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "expenses")
 @Getter
 @Setter
-public class Expense {
+public class Expense implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue
@@ -42,7 +44,6 @@ public class Expense {
         this.createdAt = Instant.now();
     }
 
-    // ✅ NEW
     private String source;       // MANUAL / SMS_AUTO
     private String referenceId;  // nullable
 }

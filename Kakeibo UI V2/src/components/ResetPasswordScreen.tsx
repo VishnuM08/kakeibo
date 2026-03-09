@@ -50,26 +50,35 @@ export function ResetPasswordScreen({
 
     try {
       await resetPassword(token, newPassword);
-      alert("Password reset successful");
       onResetSuccess();
     } catch (err: any) {
       // Do NOT log the token or the full error object that might contain config.data (token)
       console.error("Reset Password API Error occurred");
 
-      const status = err.response?.status;
-      if (status === 429) {
-        setError("Too many attempts, please try later");
-      } else if (status === 400) {
-        setError(
-          err.response?.data?.message ||
-            err.response?.data ||
-            "Invalid request. The link might be expired or invalid.",
-        );
+      if (err.response) {
+        const status = err.response.status;
+        const serverMessage = err.response.data?.message;
+
+        if (status === 429) {
+          setError("Too many attempts, please try later.");
+        } else if (status === 400) {
+          setError(
+            serverMessage ||
+              "Invalid request. The link might be expired or invalid.",
+          );
+        } else if (status >= 500) {
+          setError("Server error. Please try again later.");
+        } else {
+          setError(serverMessage || "Failed to reset password.");
+        }
+      } else if (err.request) {
+        setError("Network error. Please check your connection to the server.");
       } else {
         setError(
           err.message || "Failed to reset password. The link might be expired.",
         );
       }
+
       setIsLoading(false);
     }
   };

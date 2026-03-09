@@ -430,3 +430,21 @@ export function getSyncStatus(): {
       : null,
   };
 }
+
+/**
+ * Clear all local data associated with the user account
+ * Call this on logout or new account registration
+ */
+export function clearAllLocalData(): void {
+  const keysToRemove = [
+    "kakeibo_sync_queue",
+    "kakeibo_last_sync_time",
+    "kakeibo_expenses",
+    "kakeibo_monthly_budget",
+    "kakeibo_savings_goals",
+    "kakeibo_recurring_expenses",
+  ];
+
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
+  console.log("[SYNC] Cleared all local data");
+}

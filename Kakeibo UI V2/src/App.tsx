@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { AppMain } from "./components/AppMain";
 import { AuthScreen } from "./components/AuthScreen";
 import { ResetPasswordScreen } from "./components/ResetPasswordScreen";
+import { VerifyEmailScreen } from "./components/VerifyEmailScreen";
 import { PINLockScreen } from "./components/PINLockScreen";
 import { SettingsView } from "./components/SettingsView";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "./utils/toast";
 import { getMe, getAuthToken, removeAuthToken } from "./services/api";
+import { clearAllLocalData } from "./utils/syncUtils";
 import { Preferences } from "@capacitor/preferences";
 import { App as CapacitorApp } from "@capacitor/app";
 import { registerPlugin, Capacitor } from "@capacitor/core";
@@ -275,6 +277,7 @@ export default function App() {
   const handleLogout = async () => {
     await removeAuthToken();
     await Preferences.remove({ key: "user_data" });
+    clearAllLocalData();
     setIsAuthenticated(false);
     setIsUnlocked(false);
     setUser(null);
@@ -327,6 +330,13 @@ export default function App() {
           navigate("/login", { replace: true });
         }}
       />
+    );
+  }
+
+  let verifyEmailElement = null;
+  if (!isAuthenticated) {
+    verifyEmailElement = (
+      <VerifyEmailScreen isDarkMode={isDark} themeMode={themeMode} />
     );
   }
 
@@ -389,6 +399,7 @@ export default function App() {
             }
           />
           <Route path="/reset-password" element={resetPasswordElement} />
+          <Route path="/verify-email" element={verifyEmailElement} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </>
       ) : (

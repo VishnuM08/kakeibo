@@ -1,14 +1,18 @@
 package com.kakeibo.backend.entity;
 
 import jakarta.persistence.*;
-import java.time.Instant;
-import com.kakeibo.backend.entity.User; // 👈 REQUIRED
 import lombok.Getter;
 import lombok.Setter;
 
-@Entity
-@Table(name = "password_reset_tokens")
+import java.time.Instant;
 
+@Entity
+@Table(
+        name = "password_reset_tokens",
+        indexes = {
+                @Index(name = "idx_password_token_hash", columnList = "tokenHash")
+        }
+)
 @Getter
 @Setter
 public class PasswordResetToken {
@@ -17,7 +21,8 @@ public class PasswordResetToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(nullable = false, unique = true, length = 64)
@@ -30,7 +35,10 @@ public class PasswordResetToken {
     private boolean used = false;
 
     @Column(nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
-    // getters & setters
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = Instant.now();
+    }
 }

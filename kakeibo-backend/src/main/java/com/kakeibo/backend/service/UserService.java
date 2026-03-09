@@ -17,6 +17,7 @@ public class UserService {
         User user = new User();
         user.setName(name);
         user.setEmail(email);
+        user.setEmailVerified(false);
 
         // 🔥 THIS LINE MUST EXIST
         user.setPasswordHash(passwordEncoder.encode(rawPassword));

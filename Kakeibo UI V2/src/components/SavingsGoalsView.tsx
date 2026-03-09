@@ -101,7 +101,7 @@ export function SavingsGoalsView({
 
   return (
     <div
-      className={`fixed inset-0 z-50 overflow-y-auto ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
+      className={`fixed inset-0 z-50 overflow-y-auto pt-safe pb-safe ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
     >
       <div className="max-w-lg mx-auto px-5 py-6">
         {/* Header */}
@@ -238,13 +238,23 @@ export function SavingsGoalsView({
                       >
                         {goal.name}
                       </h3>
-                      <p
-                        className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-                      >
-                        {daysLeft > 0
-                          ? `${daysLeft} days left`
-                          : "Deadline passed"}
-                      </p>
+                      <div className="mt-1.5">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-[8px] text-[12px] font-semibold tracking-wide ${
+                            daysLeft > 0
+                              ? isDarkMode
+                                ? "bg-[#0a84ff]/20 text-[#0a84ff]"
+                                : "bg-[#007aff]/15 text-[#007aff]"
+                              : isDarkMode
+                                ? "bg-red-500/20 text-red-500"
+                                : "bg-red-500/15 text-red-600"
+                          }`}
+                        >
+                          {daysLeft > 0
+                            ? `${daysLeft} days left`
+                            : "Deadline passed"}
+                        </span>
+                      </div>
                     </div>
                     <button
                       onClick={() => handleDeleteGoal(goal.id)}

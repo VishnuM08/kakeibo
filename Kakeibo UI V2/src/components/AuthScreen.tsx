@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Lock, Mail, User, Eye, EyeOff } from "lucide-react";
 import { login, register, setAuthToken, forgotPassword } from "../services/api";
+import { clearAllLocalData } from "../utils/syncUtils";
 import { Preferences } from "@capacitor/preferences";
 
 /**
@@ -84,34 +85,39 @@ export function AuthScreen({
           return;
         }
 
-        const response = await register({ email, password, name });
+        await register({ email, password, name });
 
-        // Normalize user data
-        const baseUser = response.user || response;
-        const userData = {
-          name:
-            baseUser.name ||
-            baseUser.username ||
-            baseUser.fullName ||
-            baseUser.email ||
-            "User",
-          email: baseUser.email,
-          id: baseUser.id,
-        };
-
-        // Store token and user data
-        await setAuthToken(response.token);
-        await Preferences.set({
-          key: "user_data",
-          value: JSON.stringify(userData),
-        });
-
-        onAuthSuccess(response.token, userData);
+        clearAllLocalData();
+        // Redirect user to the OTP verification screen
+        window.location.href = `/verify-email?email=${encodeURIComponent(email)}`;
+        return;
       }
     } catch (err: any) {
-      console.error("Login Error:", err);
-      alert(`Login Failed: ${err.message}`);
-      setError(err.message || "Authentication failed. Please try again.");
+      console.error("Auth Error:", err);
+
+      let errorMessage = "Authentication failed. Please try again.";
+
+      if (err.response) {
+        // Backend returned an error response
+        const status = err.response.status;
+        const serverMessage = err.response.data?.message;
+
+        if (status === 401 || status === 404 || status === 400) {
+          errorMessage = serverMessage || "Invalid email or password.";
+        } else if (status >= 500) {
+          errorMessage = "Server error. Please try again later.";
+        } else {
+          errorMessage = serverMessage || errorMessage;
+        }
+      } else if (err.request) {
+        // Request made but no response received
+        errorMessage =
+          "Network error. Please check your connection to the server.";
+      } else {
+        errorMessage = err.message || errorMessage;
+      }
+
+      setError(errorMessage);
       setIsLoading(false);
     }
   };

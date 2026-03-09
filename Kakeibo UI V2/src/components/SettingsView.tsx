@@ -10,6 +10,7 @@ import {
   Trash2,
   ChevronRight,
   X,
+  PlayCircle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
@@ -124,6 +125,14 @@ export function SettingsView({
     }
   };
 
+  const handleRestartTour = () => {
+    localStorage.removeItem("kakeiboTourCompleted");
+    onClose();
+    setTimeout(() => {
+      window.dispatchEvent(new Event("startWalkthroughTour"));
+    }, 300);
+  };
+
   const sectionContent = (
     <div
       style={{
@@ -235,6 +244,16 @@ export function SettingsView({
                   action: async () => {
                     await Haptics.impact({ style: ImpactStyle.Light });
                     onToggleDarkMode();
+                  },
+                },
+                {
+                  icon: PlayCircle,
+                  label: "Restart App Tour",
+                  sub: "Replays the welcome walkthrough",
+                  badge: null,
+                  action: async () => {
+                    await Haptics.impact({ style: ImpactStyle.Light });
+                    handleRestartTour();
                   },
                 },
               ],
@@ -488,8 +507,6 @@ export function SettingsView({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        backdropFilter: "blur(8px)",
         zIndex: 70,
         display: "flex",
         alignItems: "center",
@@ -497,8 +514,26 @@ export function SettingsView({
         padding: 20,
       }}
     >
+      {/* Absolute Backdrop Layer */}
       <div
         style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.5)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+        }}
+        onClick={() => {
+          setShowSetupPIN(false);
+          setNewPIN("");
+          setConfirmPIN("");
+          setPinError("");
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
           borderRadius: 24,
           width: "100%",
           maxWidth: 420,
@@ -731,12 +766,6 @@ export function SettingsView({
 
   return (
     <motion.div
-      drag="y"
-      dragConstraints={{ top: 0, bottom: 0 }}
-      dragElastic={0.2}
-      onDragEnd={(_, info) => {
-        if (info.offset.y > 100) onClose();
-      }}
       className="fixed inset-0 z-50 overflow-y-auto animate-modal-enter transition-colors duration-300 custom-scrollbar shadow-2xl"
       style={{ background: mobileBg }}
     >
@@ -929,6 +958,45 @@ export function SettingsView({
                 }`}
               />
             </div>
+          </button>
+
+          {/* Restart Tour Button */}
+          <button
+            onClick={async () => {
+              await Haptics.impact({ style: ImpactStyle.Light });
+              handleRestartTour();
+            }}
+            className={`w-full px-5 py-4 flex items-center gap-3 transition-colors border-t ${
+              isDarkMode
+                ? "hover:bg-white/5 border-white/10"
+                : "hover:bg-black/5 border-black/5"
+            }`}
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                isDarkMode ? "bg-[#2c2c2e]" : "bg-[#f5f5f7]"
+              }`}
+            >
+              <PlayCircle
+                className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                strokeWidth={2.5}
+              />
+            </div>
+            <div className="flex-1 text-left">
+              <p
+                className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
+              >
+                Restart App Tour
+              </p>
+              <p
+                className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+              >
+                Replays the welcome walkthrough
+              </p>
+            </div>
+            <ChevronRight
+              className={`w-5 h-5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}
+            />
           </button>
         </div>
 
@@ -1148,9 +1216,23 @@ export function SettingsView({
 
       {/* Setup PIN Modal */}
       {showSetupPIN && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center px-5">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-5">
+          {/* Absolute Backdrop Layer */}
           <div
-            className={`rounded-[28px] w-full max-w-md p-6 ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
+            className="absolute inset-0 bg-black/60"
+            style={{
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+            }}
+            onClick={() => {
+              setShowSetupPIN(false);
+              setNewPIN("");
+              setConfirmPIN("");
+              setPinError("");
+            }}
+          />
+          <div
+            className={`relative z-10 rounded-[28px] w-full max-w-md p-6 ${isDarkMode ? "bg-[#1c1c1e]" : "bg-white"}`}
           >
             <h3
               className={`text-[24px] font-bold mb-6 ${isDarkMode ? "text-white" : "text-black"}`}

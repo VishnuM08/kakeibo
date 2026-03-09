@@ -16,41 +16,42 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class BudgetController {
 
-    private final BudgetService budgetService;
-    private final UserRepository userRepository;
+        private final BudgetService budgetService;
+        private final UserRepository userRepository;
 
-    @PostMapping
-    public ResponseEntity<?> setBudget(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody SetBudgetRequest request
-    ) {
-        if (userDetails == null) {
-            return ResponseEntity.status(401).build();
+        @PostMapping
+        public ResponseEntity<?> setBudget(
+                        @AuthenticationPrincipal CustomUserDetails userDetails,
+                        @Valid @RequestBody SetBudgetRequest request) {
+                if (userDetails == null) {
+                        return ResponseEntity.status(401).build();
+                }
+
+                User user = userRepository
+                                .findByEmail(userDetails.getUsername())
+                                .orElseThrow();
+
+                return ResponseEntity.ok(
+                                budgetService.setMonthlyBudget(user, request.getMonthlyAmount()));
         }
 
-        User user = userRepository
-                .findByEmail(userDetails.getUsername())
-                .orElseThrow();
+        @GetMapping("/current")
+        public ResponseEntity<?> getCurrentBudget(
+                        @AuthenticationPrincipal CustomUserDetails userDetails) {
+                if (userDetails == null) {
+                        return ResponseEntity.status(401).build();
+                }
 
-        return ResponseEntity.ok(
-                budgetService.setMonthlyBudget(user, request.getMonthlyAmount())
-        );
-    }
+                try {
+                        User user = userRepository
+                                        .findByEmail(userDetails.getUsername())
+                                        .orElseThrow(() -> new RuntimeException("User not found"));
 
-    @GetMapping("/current")
-    public ResponseEntity<?> getCurrentBudget(
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        if (userDetails == null) {
-            return ResponseEntity.status(401).build();
+                        return ResponseEntity.ok(
+                                        budgetService.getCurrentBudget(user));
+                } catch (Exception e) {
+                        e.printStackTrace();
+                        return ResponseEntity.status(400).body("Error in getCurrentBudget: " + e.getMessage());
+                }
         }
-
-        User user = userRepository
-                .findByEmail(userDetails.getUsername())
-                .orElseThrow();
-
-        return ResponseEntity.ok(
-                budgetService.getCurrentBudget(user)
-        );
-    }
 }

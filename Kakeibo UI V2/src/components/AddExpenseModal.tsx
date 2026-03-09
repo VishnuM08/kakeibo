@@ -205,13 +205,7 @@ export function AddExpenseModal({
       onClick={handleOverlayClick}
     >
       <motion.div
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.2}
-        onDragEnd={(_, info) => {
-          if (info.offset.y > 100) handleClose();
-        }}
-        className={`relative rounded-[28px] sm:rounded-[24px] w-full max-w-md p-5 pb-8 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar ${
+        className={`relative rounded-[28px] sm:rounded-[24px] w-full max-w-md p-4 pb-6 sm:p-5 sm:pb-8 shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar ${
           isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
         }`}
       >

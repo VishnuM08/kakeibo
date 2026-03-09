@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X,
@@ -20,6 +20,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "../utils/toast";
+import {
+  getRecurringExpenses,
+  createRecurringExpense,
+  updateRecurringExpense,
+  deleteRecurringExpense,
+} from "../services/api";
 
 export interface RecurringExpense {
   id: string;
@@ -78,23 +84,40 @@ export function RecurringExpensesView({
   const [editingExpense, setEditingExpense] = useState<RecurringExpense | null>(
     null,
   );
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load recurring expenses from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("kakeibo_recurring_expenses");
-    if (stored) {
-      setRecurringExpenses(JSON.parse(stored));
+  const fetchExpenses = async () => {
+    try {
+      if (navigator.onLine) {
+        const data = await getRecurringExpenses();
+        // Since backend uses 'description' and we use 'name' in UI temporarily, we might need mapping,
+        // or we adapt to what the API returned: The API uses `description`.
+        // We will map it to `name` for UI compatibility until UI is refactored, OR if the UI already uses `description`, we map it back.
+        // Wait, the UI interface RecurringExpense uses `name`. The API uses `description`. Let's map it.
+        const mappedData = data.map((exp: any) => ({
+          ...exp,
+          name: exp.description,
+        }));
+        setRecurringExpenses(mappedData);
+        localStorage.setItem(
+          "kakeibo_recurring_expenses",
+          JSON.stringify(mappedData),
+        );
+      } else {
+        const stored = localStorage.getItem("kakeibo_recurring_expenses");
+        if (stored) setRecurringExpenses(JSON.parse(stored));
+      }
+    } catch (err) {
+      console.error("Failed to load recurring expenses", err);
+      toast.error("Could not fetch recurring expenses.");
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
-
-  // Save to localStorage
-  const saveRecurringExpenses = (expenses: RecurringExpense[]) => {
-    setRecurringExpenses(expenses);
-    localStorage.setItem(
-      "kakeibo_recurring_expenses",
-      JSON.stringify(expenses),
-    );
   };
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
 
   // Calculate next occurrence based on frequency
   const calculateNextOccurrence = (
@@ -126,23 +149,54 @@ export function RecurringExpensesView({
   };
 
   // Toggle active/pause
-  const handleToggleActive = (id: string) => {
-    const updated = recurringExpenses.map((exp) =>
-      exp.id === id ? { ...exp, isActive: !exp.isActive } : exp,
-    );
-    saveRecurringExpenses(updated);
-    toast.success(
-      updated.find((e) => e.id === id)?.isActive
-        ? "Recurring expense activated"
-        : "Recurring expense paused",
-    );
+  const handleToggleActive = async (id: string) => {
+    const expense = recurringExpenses.find((exp) => exp.id === id);
+    if (!expense) return;
+
+    try {
+      if (navigator.onLine) {
+        await updateRecurringExpense(id, { isActive: !expense.isActive });
+      }
+
+      const updated = recurringExpenses.map((exp) =>
+        exp.id === id ? { ...exp, isActive: !exp.isActive } : exp,
+      );
+      setRecurringExpenses(updated);
+      localStorage.setItem(
+        "kakeibo_recurring_expenses",
+        JSON.stringify(updated),
+      );
+
+      toast.success(
+        !expense.isActive
+          ? "Recurring expense activated"
+          : "Recurring expense paused",
+      );
+    } catch (err) {
+      console.error("Toggle failed", err);
+      toast.error("Failed to update status");
+    }
   };
 
   // Delete recurring expense
-  const handleDelete = (id: string) => {
-    const updated = recurringExpenses.filter((exp) => exp.id !== id);
-    saveRecurringExpenses(updated);
-    toast.success("Recurring expense deleted");
+  const handleDelete = async (id: string) => {
+    try {
+      if (navigator.onLine) {
+        await deleteRecurringExpense(id);
+      }
+
+      const updated = recurringExpenses.filter((exp) => exp.id !== id);
+      setRecurringExpenses(updated);
+      localStorage.setItem(
+        "kakeibo_recurring_expenses",
+        JSON.stringify(updated),
+      );
+
+      toast.success("Recurring expense deleted");
+    } catch (err) {
+      console.error("Delete failed", err);
+      toast.error("Failed to delete expense");
+    }
   };
 
   // Process due expenses (add to regular expenses)
@@ -170,7 +224,11 @@ export function RecurringExpensesView({
         }
         return exp;
       });
-      saveRecurringExpenses(updated);
+      setRecurringExpenses(updated);
+      localStorage.setItem(
+        "kakeibo_recurring_expenses",
+        JSON.stringify(updated),
+      );
       toast.success("Expense added successfully!");
     }
   };
@@ -432,21 +490,67 @@ export function RecurringExpensesView({
             setIsAddingExpense(false);
             setEditingExpense(null);
           }}
-          onSave={(expense) => {
-            if (editingExpense) {
-              // Edit existing
-              const updated = recurringExpenses.map((exp) =>
-                exp.id === expense.id ? expense : exp,
-              );
-              saveRecurringExpenses(updated);
-              toast.success("Recurring expense updated!");
-            } else {
-              // Add new
-              saveRecurringExpenses([...recurringExpenses, expense]);
-              toast.success("Recurring expense added!");
+          onSave={async (expense) => {
+            try {
+              if (editingExpense) {
+                // Edit existing
+                let updatedData = expense;
+                if (navigator.onLine) {
+                  const apiResponse = await updateRecurringExpense(expense.id, {
+                    description: expense.name, // Map UI name back to backend description
+                    amount: expense.amount,
+                    category: expense.category,
+                    frequency: expense.frequency,
+                    startDate: expense.startDate,
+                    isActive: expense.isActive,
+                  });
+                  updatedData = {
+                    ...apiResponse,
+                    name: (apiResponse as any).description,
+                  } as any;
+                }
+
+                const updated = recurringExpenses.map((exp) =>
+                  exp.id === expense.id ? updatedData : exp,
+                );
+                setRecurringExpenses(updated);
+                localStorage.setItem(
+                  "kakeibo_recurring_expenses",
+                  JSON.stringify(updated),
+                );
+                toast.success("Recurring expense updated!");
+              } else {
+                // Add new
+                let newData = expense;
+                if (navigator.onLine) {
+                  const apiResponse = await createRecurringExpense({
+                    description: expense.name,
+                    amount: expense.amount,
+                    category: expense.category,
+                    frequency: expense.frequency,
+                    startDate: expense.startDate,
+                    isActive: expense.isActive,
+                  } as any);
+                  newData = {
+                    ...apiResponse,
+                    name: (apiResponse as any).description,
+                  } as any;
+                }
+
+                const updatedList = [...recurringExpenses, newData];
+                setRecurringExpenses(updatedList);
+                localStorage.setItem(
+                  "kakeibo_recurring_expenses",
+                  JSON.stringify(updatedList),
+                );
+                toast.success("Recurring expense added!");
+              }
+              setIsAddingExpense(false);
+              setEditingExpense(null);
+            } catch (err) {
+              console.error("Save failed", err);
+              toast.error("Failed to save recurring expense");
             }
-            setIsAddingExpense(false);
-            setEditingExpense(null);
           }}
           isDarkMode={isDarkMode}
         />
@@ -467,157 +571,168 @@ interface RecurringExpenseItemProps {
   daysUntil: number;
 }
 
-function RecurringExpenseItem({
-  expense,
-  isDarkMode,
-  onToggleActive,
-  onDelete,
-  onEdit,
-  onProcessNow,
-  isDue,
-  daysUntil,
-}: RecurringExpenseItemProps) {
-  const Icon = getCategoryIcon(expense.category);
-  const color = getCategoryColor(expense.category);
+const RecurringExpenseItem = forwardRef<
+  HTMLDivElement,
+  RecurringExpenseItemProps
+>(
+  (
+    {
+      expense,
+      isDarkMode,
+      onToggleActive,
+      onDelete,
+      onEdit,
+      onProcessNow,
+      isDue,
+      daysUntil,
+    },
+    ref,
+  ) => {
+    const Icon = getCategoryIcon(expense.category);
+    const color = getCategoryColor(expense.category);
 
-  const getNextText = () => {
-    if (!expense.isActive) return "Paused";
-    if (isDue) return "Due now";
-    if (daysUntil === 0) return "Due today";
-    if (daysUntil === 1) return "Due tomorrow";
-    if (daysUntil < 0) return `${Math.abs(daysUntil)} days overdue`;
-    return `Due in ${daysUntil} days`;
-  };
+    const getNextText = () => {
+      if (!expense.isActive) return "Paused";
+      if (isDue) return "Due now";
+      if (daysUntil === 0) return "Due today";
+      if (daysUntil === 1) return "Due tomorrow";
+      if (daysUntil < 0) return `${Math.abs(daysUntil)} days overdue`;
+      return `Due in ${daysUntil} days`;
+    };
 
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      className={`p-4 rounded-[16px] border ${
-        isDarkMode ? "bg-white/5 border-white/10" : "bg-black/3 border-black/5"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 ${
-            !expense.isActive ? "opacity-50" : ""
-          }`}
-        >
-          <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h4
-              className={`text-[17px] font-semibold ${
-                isDarkMode ? "text-white" : "text-black"
-              } ${!expense.isActive ? "opacity-50" : ""}`}
-            >
-              {expense.name}
-            </h4>
-            <p
-              className={`text-[17px] font-bold tabular-nums flex-shrink-0 ${
-                isDarkMode ? "text-white" : "text-black"
-              } ${!expense.isActive ? "opacity-50" : ""}`}
-            >
-              ₹{expense.amount.toFixed(2)}
-            </p>
+    return (
+      <motion.div
+        ref={ref}
+        layout
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className={`p-4 rounded-[16px] border ${
+          isDarkMode
+            ? "bg-white/5 border-white/10"
+            : "bg-black/3 border-black/5"
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 ${
+              !expense.isActive ? "opacity-50" : ""
+            }`}
+          >
+            <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
 
-          <div className="flex items-center gap-2 mb-3">
-            <p
-              className={`text-[15px] capitalize ${
-                isDue && expense.isActive
-                  ? isDarkMode
-                    ? "text-orange-400"
-                    : "text-orange-600"
-                  : isDarkMode
-                    ? "text-white/50"
-                    : "text-black/50"
-              }`}
-            >
-              {expense.frequency}
-            </p>
-            <span
-              className={`text-[13px] ${isDarkMode ? "text-white/30" : "text-black/30"}`}
-            >
-              •
-            </span>
-            <p
-              className={`text-[15px] ${
-                isDue && expense.isActive
-                  ? isDarkMode
-                    ? "text-orange-400"
-                    : "text-orange-600"
-                  : isDarkMode
-                    ? "text-white/50"
-                    : "text-black/50"
-              }`}
-            >
-              {getNextText()}
-            </p>
-          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h4
+                className={`text-[17px] font-semibold ${
+                  isDarkMode ? "text-white" : "text-black"
+                } ${!expense.isActive ? "opacity-50" : ""}`}
+              >
+                {expense.name}
+              </h4>
+              <p
+                className={`text-[17px] font-bold tabular-nums flex-shrink-0 ${
+                  isDarkMode ? "text-white" : "text-black"
+                } ${!expense.isActive ? "opacity-50" : ""}`}
+              >
+                ₹{expense.amount.toFixed(2)}
+              </p>
+            </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {expense.isActive && isDue && (
-              <button
-                onClick={() => onProcessNow(expense)}
-                className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
-                  isDarkMode
-                    ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
-                    : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+            <div className="flex items-center gap-2 mb-3">
+              <p
+                className={`text-[15px] capitalize ${
+                  isDue && expense.isActive
+                    ? isDarkMode
+                      ? "text-orange-400"
+                      : "text-orange-600"
+                    : isDarkMode
+                      ? "text-white/50"
+                      : "text-black/50"
                 }`}
               >
-                Process Now
-              </button>
-            )}
-            <button
-              onClick={() => onToggleActive(expense.id)}
-              className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors flex items-center gap-1 ${
-                expense.isActive
-                  ? isDarkMode
-                    ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
-                    : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                  : isDarkMode
-                    ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                    : "bg-green-100 text-green-700 hover:bg-green-200"
-              }`}
-            >
-              {expense.isActive ? (
-                <Pause className="w-3 h-3" />
-              ) : (
-                <Play className="w-3 h-3" />
+                {expense.frequency}
+              </p>
+              <span
+                className={`text-[13px] ${isDarkMode ? "text-white/30" : "text-black/30"}`}
+              >
+                •
+              </span>
+              <p
+                className={`text-[15px] ${
+                  isDue && expense.isActive
+                    ? isDarkMode
+                      ? "text-orange-400"
+                      : "text-orange-600"
+                    : isDarkMode
+                      ? "text-white/50"
+                      : "text-black/50"
+                }`}
+              >
+                {getNextText()}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {expense.isActive && isDue && (
+                <button
+                  onClick={() => onProcessNow(expense)}
+                  className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+                    isDarkMode
+                      ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
+                      : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                  }`}
+                >
+                  Process Now
+                </button>
               )}
-              {expense.isActive ? "Pause" : "Resume"}
-            </button>
-            <button
-              onClick={() => onEdit(expense)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10"
-              }`}
-            >
-              <Edit2
-                className={`w-4 h-4 ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-              />
-            </button>
-            <button
-              onClick={() => onDelete(expense.id)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10"
-              }`}
-            >
-              <Trash2
-                className={`w-4 h-4 ${isDarkMode ? "text-red-400" : "text-red-600"}`}
-              />
-            </button>
+              <button
+                onClick={() => onToggleActive(expense.id)}
+                className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors flex items-center gap-1 ${
+                  expense.isActive
+                    ? isDarkMode
+                      ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
+                      : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                    : isDarkMode
+                      ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                      : "bg-green-100 text-green-700 hover:bg-green-200"
+                }`}
+              >
+                {expense.isActive ? (
+                  <Pause className="w-3 h-3" />
+                ) : (
+                  <Play className="w-3 h-3" />
+                )}
+                {expense.isActive ? "Pause" : "Resume"}
+              </button>
+              <button
+                onClick={() => onEdit(expense)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10"
+                }`}
+              >
+                <Edit2
+                  className={`w-4 h-4 ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+                />
+              </button>
+              <button
+                onClick={() => onDelete(expense.id)}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10"
+                }`}
+              >
+                <Trash2
+                  className={`w-4 h-4 ${isDarkMode ? "text-red-400" : "text-red-600"}`}
+                />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
-  );
-}
+      </motion.div>
+    );
+  },
+);
 
 // Add/Edit Modal Component
 interface AddRecurringExpenseModalProps {

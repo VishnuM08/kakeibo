@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -17,7 +18,9 @@ import java.util.UUID;
 )
 @Getter
 @Setter
-public class Savings {
+public class Savings implements Serializable {
+
+        private static final long serialVersionUID = 1L;
 
         @Id
         @GeneratedValue
@@ -26,11 +29,9 @@ public class Savings {
         @Column(nullable = false)
         private String goalName;
 
-        // 🎯 Target amount
         @Column(nullable = false)
         private Double amount;
 
-        // 💰 Remaining to complete goal
         @Column(nullable = false)
         private Double remainingAmount;
 

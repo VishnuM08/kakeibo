@@ -15,6 +15,7 @@
   AlertTriangle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { WalkthroughTour } from "./WalkthroughTour";
 import { useEffect, useState, useMemo } from "react";
 import { message } from "antd";
 import {
@@ -135,6 +136,9 @@ export function AppMain({
     [],
   );
 
+  // Track if walkthrough is running to force-render empty states
+  const [isTourActive, setIsTourActive] = useState(false);
+
   // Helpers to check modal states from URL
   const isSearchOpen = location.pathname === "/search";
   const isAnalyticsOpen = location.pathname === "/analytics";
@@ -182,6 +186,10 @@ export function AppMain({
     try {
       // 1️⃣ Update local state immediately (optimistic UI)
       setMonthlyBudget(amount);
+      const currentMonth = new Date().toISOString().slice(0, 7);
+
+      // ALWAYS save locally to ensure offline fallback works if backend 500s
+      saveBudgetLocally(amount, currentMonth);
 
       // 2️⃣ Save to backend if online
       if (navigator.onLine) {
@@ -190,8 +198,6 @@ export function AppMain({
         await refreshBudget();
       } else {
         // 3️⃣ If offline, queue for sync
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        saveBudgetLocally(amount, currentMonth);
         console.log("[BUDGET] Queued budget for sync:", amount);
         await Haptics.impact({ style: ImpactStyle.Light }); // Haptic feedback even if queued
       }
@@ -316,6 +322,7 @@ export function AppMain({
   };
 
   const handleAddExpenseFromCalendar = (date: Date) => {
+    setIsDailyPopupOpen(false); // Close the popup first to release scroll locks
     setAddExpenseDate(date);
     navigate("/add-expense");
   };
@@ -488,121 +495,120 @@ export function AppMain({
   }, []);
 
   return (
-    <div
-      className={`min-h-screen transition-colors duration-300 ${themeMode === "oled" ? "bg-[#000000]" : isDarkMode ? "bg-[#1a1a1a]" : "bg-[#f5f5f7]"}`}
-      style={{
-        fontFamily:
-          "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      }}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-lg mx-auto px-6 pb-24 safe-top"
-        style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)" }}
+    <>
+      <WalkthroughTour isDarkMode={isDarkMode} />
+      <div
+        className={`fixed inset-0 min-h-screen pb-[80px] z-0 overflow-y-auto no-scrollbar font-sans ${themeMode === "oled" ? "bg-black text-white" : isDarkMode ? "bg-black text-white" : "bg-white text-black"} transition-colors duration-300`}
       >
-        {/* Header */}
-        <header className="mb-5">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="flex items-center justify-between mb-6"
-          >
-            <div>
-              <h1
-                className={`text-[34px] font-bold tracking-tight leading-tight mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
-              >
-                Kakeibo
-              </h1>
-              <p
-                className={`text-[17px] ${isDarkMode ? "text-white/50" : "text-black/65"}`}
-              >
-                Track today. Plan tomorrow.
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-lg mx-auto px-6 pb-24 safe-top"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)" }}
+        >
+          {/* Header */}
+          <header className="mb-5">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="flex items-center justify-between mb-6"
+            >
+              <div>
+                <h1
+                  className={`text-[34px] font-bold tracking-tight leading-tight mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
+                >
+                  Kakeibo
+                </h1>
+                <p
+                  className={`text-[17px] ${isDarkMode ? "text-white/50" : "text-black/65"}`}
+                >
+                  Track today. Plan tomorrow.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate("/help")}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
+                    isDarkMode
+                      ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
+                      : "bg-white hover:bg-[#f5f5f7]"
+                  }`}
+                >
+                  <HelpCircle
+                    className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                    strokeWidth={2.5}
+                  />
+                </button>
+                <button
+                  onClick={() => onToggleDarkMode && onToggleDarkMode()}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
+                    isDarkMode
+                      ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
+                      : "bg-white hover:bg-[#f5f5f7]"
+                  }`}
+                >
+                  {themeMode === "oled" ? (
+                    <Zap className="w-5 h-5 text-[#0a84ff]" strokeWidth={2.5} />
+                  ) : isDarkMode ? (
+                    <Sun className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  ) : (
+                    <Moon className="w-5 h-5 text-black" strokeWidth={2.5} />
+                  )}
+                </button>
+                <button
+                  onClick={() => navigate("/analytics")}
+                  className={`w-11 h-11 analytics-section rounded-full flex items-center justify-center transition-colors shadow-sm ${
+                    isDarkMode
+                      ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
+                      : "bg-white hover:bg-[#f5f5f7]"
+                  }`}
+                >
+                  <BarChart3
+                    className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                    strokeWidth={2.5}
+                  />
+                </button>
+                <button
+                  onClick={() => onOpenSettings && onOpenSettings()}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
+                    isDarkMode
+                      ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
+                      : "bg-white hover:bg-[#f5f5f7]"
+                  }`}
+                >
+                  <Settings
+                    className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
+                    strokeWidth={2.5}
+                  />
+                </button>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="bg-gradient-to-br from-[#007aff] to-[#0051d5] rounded-[20px] p-6 shadow-lg dashboard-overview"
+            >
+              <p className="text-white/80 text-[13px] font-semibold mb-1 uppercase tracking-wider">
+                {currentMonth}
               </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => navigate("/help")}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
-                  isDarkMode
-                    ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
-                    : "bg-white hover:bg-[#f5f5f7]"
-                }`}
-              >
-                <HelpCircle
-                  className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-                  strokeWidth={2.5}
-                />
-              </button>
-              <button
-                onClick={() => onToggleDarkMode && onToggleDarkMode()}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
-                  isDarkMode
-                    ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
-                    : "bg-white hover:bg-[#f5f5f7]"
-                }`}
-              >
-                {themeMode === "oled" ? (
-                  <Zap className="w-5 h-5 text-[#0a84ff]" strokeWidth={2.5} />
-                ) : isDarkMode ? (
-                  <Sun className="w-5 h-5 text-white" strokeWidth={2.5} />
-                ) : (
-                  <Moon className="w-5 h-5 text-black" strokeWidth={2.5} />
-                )}
-              </button>
-              <button
-                onClick={() => navigate("/analytics")}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
-                  isDarkMode
-                    ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
-                    : "bg-white hover:bg-[#f5f5f7]"
-                }`}
-              >
-                <BarChart3
-                  className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-                  strokeWidth={2.5}
-                />
-              </button>
-              <button
-                onClick={() => onOpenSettings && onOpenSettings()}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${
-                  isDarkMode
-                    ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]"
-                    : "bg-white hover:bg-[#f5f5f7]"
-                }`}
-              >
-                <Settings
-                  className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-                  strokeWidth={2.5}
-                />
-              </button>
-            </div>
-          </motion.div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-white text-[48px] font-bold tracking-tighter">
+                  ₹{monthTotal.toFixed(2)}
+                </span>
+              </div>
+              <p className="text-white/70 text-[15px]">
+                Total Spent This Month
+              </p>
+            </motion.div>
+          </header>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="bg-gradient-to-br from-[#007aff] to-[#0051d5] rounded-[20px] p-6 shadow-lg"
-          >
-            <p className="text-white/80 text-[13px] font-semibold mb-1 uppercase tracking-wider">
-              {currentMonth}
-            </p>
-            <div className="flex items-baseline gap-1 mb-1">
-              <span className="text-white text-[48px] font-bold tracking-tighter">
-                ₹{monthTotal.toFixed(2)}
-              </span>
-            </div>
-            <p className="text-white/70 text-[15px]">Total Spent This Month</p>
-          </motion.div>
-        </header>
-
-        {/* Budget Overview - Merged Component (Compact + Expandable) */}
-        {monthlyBudget > 0 && (
-          <div className="mb-5">
-            {monthTotal >= monthlyBudget * 0.8 && (
+          {/* Budget Overview - Merged Component (Compact + Expandable) */}
+          <div className="mb-5 budget-section">
+            {monthlyBudget > 0 && monthTotal >= monthlyBudget * 0.8 && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -634,152 +640,139 @@ export function AppMain({
               isDarkMode={isDarkMode}
             />
           </div>
-        )}
 
-        {/* Upcoming Bills Widget */}
-        <UpcomingBillsWidget
-          onOpenBills={() => navigate("/bill-reminders")}
-          isDarkMode={isDarkMode}
-        />
-
-        {/* Recurring Expenses Widget */}
-        <RecurringExpensesWidget
-          onOpenRecurring={() => navigate("/recurring")}
-          isDarkMode={isDarkMode}
-        />
-
-        {/* Highlighted Primary Add Expense Button */}
-        <motion.button
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          onClick={() => navigate("/add-expense")}
-          className="w-full mb-6 py-4 rounded-[20px] transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.97] font-semibold text-[17px] text-white bg-gradient-to-br from-[#007aff] to-[#0051d5] hover:opacity-95 shadow-lg border border-transparent"
-          style={{
-            boxShadow: isDarkMode
-              ? "0 8px 24px rgba(10, 132, 255, 0.3)"
-              : "0 8px 24px rgba(0, 122, 255, 0.3)",
-          }}
-        >
-          <Plus className="w-5 h-5" strokeWidth={2.5} />
-          <span className="tracking-wide">Add Expense</span>
-        </motion.button>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: {},
-            visible: {
-              transition: {
-                staggerChildren: 0.05,
-                delayChildren: 0.2,
-              },
-            },
-          }}
-          className="grid grid-cols-2 gap-3 mb-8"
-        >
-          <motion.button
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            onClick={() => navigate("/recurring")}
-            className={`py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
-              isDarkMode
-                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
-                : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
-            }`}
-          >
-            <Repeat className="w-4 h-4" strokeWidth={2.5} />
-            <span>Recurring</span>
-          </motion.button>
-          <motion.button
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            onClick={() => navigate("/savings")}
-            className={`py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
-              isDarkMode
-                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
-                : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
-            }`}
-          >
-            <Target className="w-4 h-4" strokeWidth={2.5} />
-            <span>Savings</span>
-          </motion.button>
-          <motion.button
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            onClick={() => navigate("/export")}
-            className={`py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
-              isDarkMode
-                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
-                : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
-            }`}
-          >
-            <Download className="w-4 h-4" strokeWidth={2.5} />
-            <span>Export</span>
-          </motion.button>
-
-          <motion.button
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            onClick={() => navigate("/search")}
-            className={`py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
-              isDarkMode
-                ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
-                : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
-            }`}
-          >
-            <Search className="w-4 h-4" strokeWidth={2.5} />
-            <span>Search</span>
-          </motion.button>
-        </motion.div>
-
-        {/* Today's Expenses Section */}
-        <section className="mb-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3
-              className={`text-[22px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
-            >
-              Today's Expenses
-            </h3>
-            <span
-              className={`text-[15px] font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}
-            >
-              ₹{todayTotal.toFixed(2)}
-            </span>
+          {/* Upcoming Bills Widget */}
+          <div className="upcoming-bills-section">
+            <UpcomingBillsWidget
+              onOpenBills={() => navigate("/bill-reminders")}
+              isDarkMode={isDarkMode}
+            />
           </div>
 
-          {/* Category Filter Pills (Feature 6) */}
-          {availableCategories.length > 0 && (
-            <div className="flex overflow-x-auto gap-2 pb-3 mb-4 no-scrollbar -mx-6 px-6">
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className={`px-4 py-2 rounded-full text-[13px] font-bold whitespace-nowrap transition-all ${
-                  selectedCategory === null
-                    ? "bg-[#007aff] text-white shadow-md shadow-[#007aff]/20"
-                    : themeMode === "oled"
-                      ? "bg-[#000000] text-white/50 border border-white/20"
-                      : isDarkMode
-                        ? "bg-[#1c1c1e] text-white/50 border border-white/5"
-                        : "bg-white text-black/65 border border-black/12 shadow-sm"
-                }`}
+          {/* Recurring Expenses Widget */}
+          <div className="recurring-widget-section">
+            <RecurringExpensesWidget
+              onOpenRecurring={() => navigate("/recurring")}
+              isDarkMode={isDarkMode}
+            />
+          </div>
+
+          {/* Highlighted Primary Add Expense Button */}
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => navigate("/add-expense")}
+            className="w-full mb-6 py-4 add-expense-btn rounded-[20px] transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.97] font-semibold text-[17px] text-white bg-gradient-to-br from-[#007aff] to-[#0051d5] hover:opacity-95 shadow-lg border border-transparent"
+            style={{
+              boxShadow: isDarkMode
+                ? "0 8px 24px rgba(10, 132, 255, 0.3)"
+                : "0 8px 24px rgba(0, 122, 255, 0.3)",
+            }}
+          >
+            <Plus className="w-5 h-5" strokeWidth={2.5} />
+            <span className="tracking-wide">Add Expense</span>
+          </motion.button>
+
+          {/* Quick Actions */}
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: {
+                transition: {
+                  staggerChildren: 0.05,
+                  delayChildren: 0.2,
+                },
+              },
+            }}
+            className="grid grid-cols-2 gap-3 mb-8"
+          >
+            <motion.button
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              onClick={() => navigate("/recurring")}
+              className={`py-3 px-4 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
+                isDarkMode
+                  ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
+                  : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
+              }`}
+            >
+              <Repeat className="w-4 h-4" strokeWidth={2.5} />
+              <span>Recurring</span>
+            </motion.button>
+            <motion.button
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              onClick={() => navigate("/savings")}
+              className={`py-3 px-4 savings-section rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
+                isDarkMode
+                  ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
+                  : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
+              }`}
+            >
+              <Target className="w-4 h-4" strokeWidth={2.5} />
+              <span>Savings</span>
+            </motion.button>
+            <motion.button
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              onClick={() => navigate("/export")}
+              className={`py-3 px-4 export-section rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
+                isDarkMode
+                  ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
+                  : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
+              }`}
+            >
+              <Download className="w-4 h-4" strokeWidth={2.5} />
+              <span>Export</span>
+            </motion.button>
+
+            <motion.button
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              onClick={() => navigate("/search")}
+              className={`py-3 px-4 search-section rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-[0.97] font-semibold text-[15px] border ${
+                isDarkMode
+                  ? "bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#0a84ff] border-white/10"
+                  : "bg-white hover:bg-[#f5f5f7] text-[#007aff] border-black/12"
+              }`}
+            >
+              <Search className="w-4 h-4" strokeWidth={2.5} />
+              <span>Search</span>
+            </motion.button>
+          </motion.div>
+
+          {/* Today's Expenses Section */}
+          <section className="mb-5 todays-expenses-section">
+            <div className="flex items-center justify-between mb-4">
+              <h3
+                className={`text-[22px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
               >
-                All
-              </button>
-              {availableCategories.map((cat) => (
+                Today's Expenses
+              </h3>
+              <span
+                className={`text-[15px] font-bold ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+              >
+                ₹{todayTotal.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Category Filter Pills (Feature 6) */}
+            {availableCategories.length > 0 && (
+              <div className="flex overflow-x-auto gap-2 pb-3 mb-4 no-scrollbar -mx-6 px-6">
                 <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-[13px] font-bold whitespace-nowrap capitalize transition-all ${
-                    selectedCategory === cat
+                  onClick={() => setSelectedCategory(null)}
+                  className={`px-4 py-2 rounded-full text-[13px] font-bold whitespace-nowrap transition-all ${
+                    selectedCategory === null
                       ? "bg-[#007aff] text-white shadow-md shadow-[#007aff]/20"
                       : themeMode === "oled"
                         ? "bg-[#000000] text-white/50 border border-white/20"
@@ -788,228 +781,244 @@ export function AppMain({
                           : "bg-white text-black/65 border border-black/12 shadow-sm"
                   }`}
                 >
-                  {cat}
+                  All
                 </button>
-              ))}
-            </div>
-          )}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.35 }}
-            className={`rounded-[20px] overflow-hidden shadow-sm border transition-colors ${
-              themeMode === "oled"
-                ? "bg-[#000000] border-white/15"
-                : isDarkMode
-                  ? "bg-[#1c1c1e] border-white/10"
-                  : "bg-white border-black/5"
+                {availableCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-2 rounded-full text-[13px] font-bold whitespace-nowrap capitalize transition-all ${
+                      selectedCategory === cat
+                        ? "bg-[#007aff] text-white shadow-md shadow-[#007aff]/20"
+                        : themeMode === "oled"
+                          ? "bg-[#000000] text-white/50 border border-white/20"
+                          : isDarkMode
+                            ? "bg-[#1c1c1e] text-white/50 border border-white/5"
+                            : "bg-white text-black/65 border border-black/12 shadow-sm"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.35 }}
+              className={`rounded-[20px] overflow-hidden shadow-sm border transition-colors ${
+                themeMode === "oled"
+                  ? "bg-[#000000] border-white/15"
+                  : isDarkMode
+                    ? "bg-[#1c1c1e] border-white/10"
+                    : "bg-white border-black/5"
+              }`}
+            >
+              <AnimatePresence mode="popLayout">
+                {todaysExpenses.length > 0 ? (
+                  todaysExpenses.map((expense, index) => {
+                    const Icon = expense.icon;
+                    return (
+                      <SwipeableExpenseItem
+                        key={expense.id}
+                        onEdit={() => handleEditExpense(expense)}
+                        onDelete={() => handleDeleteExpense(expense.id)}
+                        isDarkMode={isDarkMode}
+                      >
+                        <button
+                          onClick={() => handleEditExpense(expense)}
+                          className={`w-full p-4 flex items-center gap-3.5 transition-colors cursor-pointer text-left ${
+                            isDarkMode
+                              ? "active:bg-white/5 hover:bg-white/3"
+                              : "active:bg-black/5 hover:bg-black/3"
+                          }`}
+                        >
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className={`w-12 h-12 rounded-full bg-gradient-to-br ${expense.color} flex items-center justify-center flex-shrink-0 shadow-sm`}
+                          >
+                            <Icon
+                              className="w-5 h-5 text-white"
+                              strokeWidth={2.5}
+                            />
+                          </motion.div>
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className={`text-[17px] font-semibold mb-0.5 ${isDarkMode ? "text-white" : "text-black"}`}
+                            >
+                              {expense.description}
+                            </p>
+                            <p
+                              className={`text-[15px] ${isDarkMode ? "text-white/45" : "text-black/45"}`}
+                            >
+                              {expense.time}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p
+                              className={`text-[20px] font-bold tabular-nums ${isDarkMode ? "text-white" : "text-black"}`}
+                            >
+                              ₹{expense.amount.toFixed(2)}
+                            </p>
+                          </div>
+                        </button>
+                        {index < todaysExpenses.length - 1 && (
+                          <div
+                            className={`h-[0.5px] ml-16 ${isDarkMode ? "bg-white/10" : "bg-black/8"}`}
+                          ></div>
+                        )}
+                      </SwipeableExpenseItem>
+                    );
+                  })
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.4 }}
+                    className="p-10 text-center"
+                  >
+                    <p
+                      className={`text-[17px] ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+                    >
+                      No expenses matched
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </section>
+
+          {/* View Calendar Button */}
+          <button
+            onClick={() => navigate("/calendar")}
+            className={`w-full py-[15px] px-6 calendar-section rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.97] font-semibold text-[17px] border ${
+              isDarkMode
+                ? "bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white border-white/10"
+                : "bg-white hover:bg-gray-50 text-[#007aff] border-black/12 shadow-sm"
             }`}
           >
-            <AnimatePresence mode="popLayout">
-              {todaysExpenses.length > 0 ? (
-                todaysExpenses.map((expense, index) => {
-                  const Icon = expense.icon;
-                  return (
-                    <SwipeableExpenseItem
-                      key={expense.id}
-                      onEdit={() => handleEditExpense(expense)}
-                      onDelete={() => handleDeleteExpense(expense.id)}
-                      isDarkMode={isDarkMode}
-                    >
-                      <button
-                        onClick={() => handleEditExpense(expense)}
-                        className={`w-full p-4 flex items-center gap-3.5 transition-colors cursor-pointer text-left ${
-                          isDarkMode
-                            ? "active:bg-white/5 hover:bg-white/3"
-                            : "active:bg-black/5 hover:bg-black/3"
-                        }`}
-                      >
-                        <motion.div
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className={`w-12 h-12 rounded-full bg-gradient-to-br ${expense.color} flex items-center justify-center flex-shrink-0 shadow-sm`}
-                        >
-                          <Icon
-                            className="w-5 h-5 text-white"
-                            strokeWidth={2.5}
-                          />
-                        </motion.div>
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className={`text-[17px] font-semibold mb-0.5 ${isDarkMode ? "text-white" : "text-black"}`}
-                          >
-                            {expense.description}
-                          </p>
-                          <p
-                            className={`text-[15px] ${isDarkMode ? "text-white/45" : "text-black/45"}`}
-                          >
-                            {expense.time}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p
-                            className={`text-[20px] font-bold tabular-nums ${isDarkMode ? "text-white" : "text-black"}`}
-                          >
-                            ₹{expense.amount.toFixed(2)}
-                          </p>
-                        </div>
-                      </button>
-                      {index < todaysExpenses.length - 1 && (
-                        <div
-                          className={`h-[0.5px] ml-16 ${isDarkMode ? "bg-white/10" : "bg-black/8"}`}
-                        ></div>
-                      )}
-                    </SwipeableExpenseItem>
-                  );
-                })
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.4 }}
-                  className="p-10 text-center"
-                >
-                  <p
-                    className={`text-[17px] ${isDarkMode ? "text-white/40" : "text-black/40"}`}
-                  >
-                    No expenses matched
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        </section>
+            <Calendar className="w-5 h-5" strokeWidth={2.5} />
+            <span>View Past Expenses</span>
+          </button>
 
-        {/* View Calendar Button */}
-        <button
-          onClick={() => navigate("/calendar")}
-          className={`w-full py-[15px] px-6 rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.97] font-semibold text-[17px] border ${
-            isDarkMode
-              ? "bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white border-white/10"
-              : "bg-white hover:bg-gray-50 text-[#007aff] border-black/12 shadow-sm"
-          }`}
-        >
-          <Calendar className="w-5 h-5" strokeWidth={2.5} />
-          <span>View Past Expenses</span>
-        </button>
-
-        {/* Kakeibo Philosophy Quote */}
-        <div className="mt-10 px-4">
-          <div
-            className={`p-4 border-b ${isDarkMode ? "border-white/10" : "border-black/12"}`}
-          >
-            <p
-              className={`text-[15px] text-center leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+          {/* Kakeibo Philosophy Quote */}
+          <div className="mt-10 px-4">
+            <div
+              className={`p-4 border-b ${isDarkMode ? "border-white/10" : "border-black/12"}`}
             >
-              "Before you buy, ask yourself:
-              <br />
-              Will this bring me joy?"
-            </p>
-            <p
-              className={`text-[13px] text-center mt-2 font-medium ${isDarkMode ? "text-white/30" : "text-black/30"}`}
-            >
-              — Kakeibo Philosophy
-            </p>
+              <p
+                className={`text-[15px] text-center leading-relaxed ${isDarkMode ? "text-white/50" : "text-black/50"}`}
+              >
+                "Before you buy, ask yourself:
+                <br />
+                Will this bring me joy?"
+              </p>
+              <p
+                className={`text-[13px] text-center mt-2 font-medium ${isDarkMode ? "text-white/30" : "text-black/30"}`}
+              >
+                — Kakeibo Philosophy
+              </p>
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {isCalendarOpen && (
-        <CalendarView
-          expenses={expenses}
-          onClose={() => navigate("/")}
-          onDateClick={handleDateClick}
+        {isCalendarOpen && (
+          <CalendarView
+            expenses={expenses}
+            onClose={() => navigate("/")}
+            onDateClick={handleDateClick}
+            isDarkMode={isDarkMode}
+          />
+        )}
+
+        <DailyExpensePopup
+          isOpen={isDailyPopupOpen}
+          onClose={() => setIsDailyPopupOpen(false)}
+          onAddExpense={handleAddExpenseFromCalendar}
+          date={selectedDate}
+          expenses={selectedDayExpenses}
           isDarkMode={isDarkMode}
         />
-      )}
 
-      <DailyExpensePopup
-        isOpen={isDailyPopupOpen}
-        onClose={() => navigate("/")}
-        onAddExpense={handleAddExpenseFromCalendar}
-        date={selectedDate}
-        expenses={selectedDayExpenses}
-        isDarkMode={isDarkMode}
-      />
+        {isBudgetModalOpen && (
+          <BudgetSettingsModal
+            isOpen={isBudgetModalOpen}
+            onClose={() => navigate("/")}
+            currentBudget={monthlyBudget}
+            onSaveBudget={handleSaveBudget}
+            isDarkMode={isDarkMode}
+          />
+        )}
 
-      {isBudgetModalOpen && (
-        <BudgetSettingsModal
-          isOpen={isBudgetModalOpen}
+        {isAnalyticsOpen && (
+          <AnalyticsView
+            expenses={expenses}
+            onClose={() => navigate("/")}
+            isDarkMode={isDarkMode}
+          />
+        )}
+
+        {isRecurringModalOpen && (
+          <RecurringExpensesView
+            onClose={() => navigate("/")}
+            isDarkMode={isDarkMode}
+            onAddExpense={handleAddExpense}
+          />
+        )}
+
+        {isSavingsGoalsOpen && (
+          <SavingsGoalsView
+            onClose={() => navigate("/")}
+            isDarkMode={isDarkMode}
+          />
+        )}
+
+        <ExportModal
+          isOpen={isExportModalOpen}
           onClose={() => navigate("/")}
-          currentBudget={monthlyBudget}
-          onSaveBudget={handleSaveBudget}
+          onExport={handleExportToCSV}
           isDarkMode={isDarkMode}
         />
-      )}
 
-      {isAnalyticsOpen && (
-        <AnalyticsView
-          expenses={expenses}
-          onClose={() => navigate("/")}
-          isDarkMode={isDarkMode}
-        />
-      )}
+        {isSearchOpen && (
+          <MobileSearchModal
+            isOpen={isSearchOpen}
+            onClose={() => navigate("/")}
+            expenses={filteredExpenses}
+            onSelectExpense={(expense) => {
+              // When user selects an expense from search, open edit modal
+              const uiExpense: UIExpense = {
+                ...expense,
+                icon: getCategoryIcon(expense.category),
+                color: getCategoryColor(expense.category),
+                time: new Date(expense.date).toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                }),
+                dateTime: "",
+              };
+              handleEditExpense(uiExpense);
+            }}
+            isDarkMode={isDarkMode}
+          />
+        )}
 
-      {isRecurringModalOpen && (
-        <RecurringExpensesView
-          onClose={() => navigate("/")}
-          isDarkMode={isDarkMode}
-          onAddExpense={handleAddExpense}
-        />
-      )}
+        {isBillRemindersOpen && (
+          <BillRemindersView
+            onClose={() => navigate("/")}
+            isDarkMode={isDarkMode}
+            onAddExpense={handleAddExpense}
+          />
+        )}
 
-      {isSavingsGoalsOpen && (
-        <SavingsGoalsView
-          onClose={() => navigate("/")}
-          isDarkMode={isDarkMode}
-        />
-      )}
+        {isHelpOpen && (
+          <HelpView onClose={() => navigate("/")} isDarkMode={isDarkMode} />
+        )}
 
-      <ExportModal
-        isOpen={isExportModalOpen}
-        onClose={() => navigate("/")}
-        onExport={handleExportToCSV}
-        isDarkMode={isDarkMode}
-      />
-
-      {isSearchOpen && (
-        <MobileSearchModal
-          isOpen={isSearchOpen}
-          onClose={() => navigate("/")}
-          expenses={filteredExpenses}
-          onSelectExpense={(expense) => {
-            // When user selects an expense from search, open edit modal
-            const uiExpense: UIExpense = {
-              ...expense,
-              icon: getCategoryIcon(expense.category),
-              color: getCategoryColor(expense.category),
-              time: new Date(expense.date).toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              }),
-              dateTime: "",
-            };
-            handleEditExpense(uiExpense);
-          }}
-          isDarkMode={isDarkMode}
-        />
-      )}
-
-      {isBillRemindersOpen && (
-        <BillRemindersView
-          onClose={() => navigate("/")}
-          isDarkMode={isDarkMode}
-          onAddExpense={handleAddExpense}
-        />
-      )}
-
-      {isHelpOpen && (
-        <HelpView onClose={() => navigate("/")} isDarkMode={isDarkMode} />
-      )}
-
-      {/* Primary Modals (should be on top) */}
-      {/* <AddExpenseModal
+        {/* Primary Modals (should be on top) */}
+        {/* <AddExpenseModal
         isOpen={isAddModalOpen}
         onClose={async () => {
           // Trigger Haptics
@@ -1023,33 +1032,34 @@ export function AppMain({
         initialDate={addExpenseDate}
       /> */}
 
-      <AddExpenseModal
-        isOpen={isAddModalOpen}
-        onClose={async () => {
-          await Haptics.impact({ style: ImpactStyle.Light });
-          navigate("/");
-          setAddExpenseDate(undefined);
-        }}
-        onAdd={handleAddExpense}
-        isDarkMode={isDarkMode}
-        initialDate={addExpenseDate}
-      />
-
-      {isEditModalOpen && editingExpense && (
-        <EditExpenseModal
-          isOpen={isEditModalOpen}
+        <AddExpenseModal
+          isOpen={isAddModalOpen}
           onClose={async () => {
-            // Trigger Haptics
             await Haptics.impact({ style: ImpactStyle.Light });
-
             navigate("/");
+            setAddExpenseDate(undefined);
           }}
-          expense={editingExpense}
-          onSave={handleSaveEdit}
-          onDelete={handleDeleteExpense}
+          onAdd={handleAddExpense}
           isDarkMode={isDarkMode}
+          initialDate={addExpenseDate}
         />
-      )}
-    </div>
+
+        {isEditModalOpen && editingExpense && (
+          <EditExpenseModal
+            isOpen={isEditModalOpen}
+            onClose={async () => {
+              // Trigger Haptics
+              await Haptics.impact({ style: ImpactStyle.Light });
+
+              navigate("/");
+            }}
+            expense={editingExpense}
+            onSave={handleSaveEdit}
+            onDelete={handleDeleteExpense}
+            isDarkMode={isDarkMode}
+          />
+        )}
+      </div>
+    </>
   );
 }

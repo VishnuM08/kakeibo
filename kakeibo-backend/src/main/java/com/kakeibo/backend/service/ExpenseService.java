@@ -16,6 +16,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,9 @@ public class ExpenseService {
     // ===============================
     // CREATE
     // ===============================
+
     @Transactional
+    @CacheEvict(value = "expenses", key = "#userDetails.user.id")
     public ExpenseResponse createExpense(
             CreateExpenseRequest req,
             CustomUserDetails userDetails
@@ -88,6 +92,7 @@ public class ExpenseService {
     // ===============================
     // READ
     // ===============================
+    @Cacheable(value = "expenses", key = "#userDetails.user.id")
     public List<ExpenseResponse> getUserExpenses(CustomUserDetails userDetails) {
         return expenseRepository.findByUser(userDetails.getUser())
                 .stream()
@@ -100,6 +105,7 @@ public class ExpenseService {
     // UPDATE
     // ===============================
     @Transactional
+    @CacheEvict(value = "expenses", key = "#userDetails.user.id")
     public ExpenseResponse updateExpense(
             UUID expenseId,
             UpdateExpenseRequest req,
@@ -135,6 +141,7 @@ public class ExpenseService {
     // DELETE
     // ===============================
     @Transactional
+    @CacheEvict(value = "expenses", key = "#userDetails.user.id")
     public void deleteExpense(
             UUID expenseId,
             CustomUserDetails userDetails

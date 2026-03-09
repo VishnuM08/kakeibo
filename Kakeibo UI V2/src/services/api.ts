@@ -162,6 +162,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     // Log the error for debugging
+    console.error("API Error detailed response:", error.response?.data);
     console.error("API Error:", error);
 
     // Only alert for actual Network Errors during development
@@ -255,14 +256,15 @@ export async function register(userData: {
 }) {
   const response = await api.post("/auth/register", userData);
   return response.data;
+}
 
-  // const response = await fetch('/api/auth/register', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(userData)
-  // });
-  // if (!response.ok) throw new Error('Registration failed');
-  // return response.json();
+/**
+ * Verify OTP API
+ * POST /api/auth/verify-otp
+ */
+export async function verifyOTP(data: { email: string; otp: string }) {
+  const response = await api.post("/auth/verify-otp", data);
+  return response.data;
 }
 
 /**
@@ -415,57 +417,53 @@ export async function deleteExpense(id: string): Promise<void> {
  * BACKEND ENDPOINT: GET /api/recurring-expenses
  * RESPONSE: RecurringExpense[]
  */
-// export async function getRecurringExpenses(): Promise<RecurringExpense[]> {
-//   // TODO: Replace with actual API call
-//   console.log('[API] Get recurring expenses');
-
-//   const stored = localStorage.getItem('kakeibo_recurring_expenses');
-//   return stored ? JSON.parse(stored) : [];
-
-//   // Actual implementation:
-//   // return apiRequest<RecurringExpense[]>('/recurring-expenses');
-// }
+export async function getRecurringExpenses(): Promise<RecurringExpense[]> {
+  const response = await api.get<RecurringExpense[]>("/recurring-expenses");
+  console.log("[API] Get recurring expenses response:", response.data);
+  return response.data;
+}
 
 /**
  * POST /recurring-expenses
  * Create new recurring expense
  *
  * BACKEND ENDPOINT: POST /api/recurring-expenses
- * REQUEST BODY: Omit<RecurringExpense, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+ * REQUEST BODY: Omit<RecurringExpense, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'lastGenerated'>
  * RESPONSE: RecurringExpense
  */
-// export async function createRecurringExpense(
-//   expense: Omit<RecurringExpense, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
-// ): Promise<RecurringExpense> {
-//   // TODO: Replace with actual API call
-//   console.log('[API] Create recurring expense:', expense);
-
-//   return apiRequest<RecurringExpense>('/recurring-expenses', {
-//     method: 'POST',
-//     body: JSON.stringify(expense),
-//   });
-// }
+export async function createRecurringExpense(
+  expense: Omit<
+    RecurringExpense,
+    "id" | "userId" | "createdAt" | "updatedAt" | "lastGenerated"
+  >,
+): Promise<RecurringExpense> {
+  const response = await api.post<RecurringExpense>(
+    "/recurring-expenses",
+    expense,
+  );
+  console.log("[API] Create recurring expense response:", response.data);
+  return response.data;
+}
 
 /**
  * PUT /recurring-expenses/:id
  * Update recurring expense
- * 
+ *
  * BACKEND ENDPOINT: PUT /api/recurring-expenses/{id}
  * REQUEST BODY: Partial<RecurringExpense>
  * RESPONSE: RecurringExpense
-//  */
-// export async function updateRecurringExpense(
-//   id: string,
-//   updates: Partial<RecurringExpense>
-// ): Promise<RecurringExpense> {
-//   // TODO: Replace with actual API call
-//   console.log('[API] Update recurring expense:', id, updates);
-
-//   return apiRequest<RecurringExpense>(`/recurring-expenses/${id}`, {
-//     method: 'PUT',
-//     body: JSON.stringify(updates),
-//   });
-// }
+ */
+export async function updateRecurringExpense(
+  id: string,
+  updates: Partial<RecurringExpense>,
+): Promise<RecurringExpense> {
+  const response = await api.put<RecurringExpense>(
+    `/recurring-expenses/${id}`,
+    updates,
+  );
+  console.log("[API] Update recurring expense response:", response.data);
+  return response.data;
+}
 
 /**
  * DELETE /recurring-expenses/:id
@@ -473,14 +471,10 @@ export async function deleteExpense(id: string): Promise<void> {
  *
  * BACKEND ENDPOINT: DELETE /api/recurring-expenses/{id}
  */
-// export async function deleteRecurringExpense(id: string): Promise<void> {
-//   // TODO: Replace with actual API call
-//   console.log('[API] Delete recurring expense:', id);
-
-//   return apiRequest<void>(`/recurring-expenses/${id}`, {
-//     method: 'DELETE',
-//   });
-// }
+export async function deleteRecurringExpense(id: string): Promise<void> {
+  await api.delete(`/recurring-expenses/${id}`);
+  console.log("[API] Deleted recurring expense:", id);
+}
 
 // ==================== BUDGET APIs ====================
 
@@ -578,9 +572,9 @@ export async function createSavingsGoal(
     SavingsGoal,
     "id" | "userId" | "createdAt" | "updatedAt" | "currentAmount" | "color"
   >,
-) {
+): Promise<SavingsGoal> {
   const payload = {
-    goalName: goal.name,
+    goal: goal.name, // The backend expects 'goal' for the POST body
     amount: goal.targetAmount,
     date: goal.deadline,
   };
@@ -604,7 +598,7 @@ export async function createSavingsGoal(
 export async function updateSavingsGoal(
   id: string,
   updates: { addAmount: number },
-) {
+): Promise<SavingsGoal> {
   const response = await api.put<BackendSavingsGoal>(`/savings/${id}`, updates);
   console.log("[API] Update savings goal response:", response.data);
 

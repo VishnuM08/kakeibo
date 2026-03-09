@@ -141,41 +141,33 @@ export function BudgetOverview({
     return (
       <button
         onClick={onSetBudget}
-        className={`w-full rounded-[20px] p-4 shadow-sm mb-5 transition-all active:scale-[0.98] border ${
-          isDarkMode
-            ? "bg-[#1c1c1e] border-white/10 hover:bg-[#2c2c2e]"
-            : "bg-white border-black/5 hover:bg-white"
-        }`}
+        className="w-full relative overflow-hidden rounded-[20px] p-5 mb-5 active:scale-[0.98] transition-all duration-300 group text-white text-left"
+        style={{
+          background: "linear-gradient(135deg, #30d158 0%, #28a745 100%)",
+          boxShadow: isDarkMode
+            ? "0 8px 24px rgba(48, 209, 88, 0.3)"
+            : "0 8px 24px rgba(40, 167, 69, 0.3)",
+        }}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                isDarkMode ? "bg-[#0a84ff]/20" : "bg-[#007aff]/10"
-              }`}
-            >
-              <Wallet
-                className={`w-4 h-4 ${isDarkMode ? "text-[#0a84ff]" : "text-[#007aff]"}`}
-                strokeWidth={2.5}
-              />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent)] rounded-bl-full transition-transform duration-500 group-hover:scale-110" />
+
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/20">
+              <Wallet className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
             <div className="text-left">
-              <p
-                className={`text-[15px] font-semibold ${isDarkMode ? "text-white" : "text-black"}`}
-              >
+              <p className="text-[17px] font-bold tracking-tight text-white">
                 Set Monthly Budget
               </p>
-              <p
-                className={`text-[13px] ${isDarkMode ? "text-white/50" : "text-black/50"}`}
-              >
+              <p className="text-[14px] mt-0.5 font-medium text-white/80">
                 Track spending & stay on target
               </p>
             </div>
           </div>
-          <ChevronRight
-            className={`w-5 h-5 ${isDarkMode ? "text-white/30" : "text-black/30"}`}
-            strokeWidth={2.5}
-          />
+          <div className="w-8 h-8 rounded-full flex items-center justify-center transition-transform group-hover:translate-x-1 bg-white/20">
+            <ChevronRight className="w-5 h-5 text-white" strokeWidth={3} />
+          </div>
         </div>
       </button>
     );

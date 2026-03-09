@@ -1,5 +1,6 @@
 package com.kakeibo.backend.service;
 
+import com.kakeibo.backend.dto.SavingResponse;
 import com.kakeibo.backend.entity.Savings;
 import com.kakeibo.backend.entity.User;
 import com.kakeibo.backend.repository.SavingsRepository;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 @Service
 @RequiredArgsConstructor
@@ -21,7 +24,8 @@ public class SavingsService {
      * CREATE savings
      */
     @Transactional
-    public Savings setSavings(
+    @CacheEvict(value = "savings", key = "#user.id")
+    public SavingResponse setSavings(
             User user,
             String goal,
             Double amount,
@@ -34,21 +38,27 @@ public class SavingsService {
         savings.setRemainingAmount(amount); // 🔥 KEY LINE
         savings.setDate(date);
 
-        return savingsRepository.save(savings);
+        Savings saved = savingsRepository.save(savings);
+        return new SavingResponse(saved.getId(), saved.getGoalName(), saved.getAmount(), saved.getRemainingAmount(), saved.getDate());
     }
 
     /**
      * GET all savings for user
      */
-    public List<Savings> getAllSavings(User user) {
-        return savingsRepository.findByUser(user);
+    @Cacheable(value = "savings", key = "#user.id")
+    public List<SavingResponse> getAllSavings(User user) {
+        return savingsRepository.findByUser(user)
+                .stream()
+                .map(s -> new SavingResponse(s.getId(), s.getGoalName(), s.getAmount(), s.getRemainingAmount(), s.getDate()))
+                .toList();
     }
 
     /**
      * ADD to savings (reduce remaining)
      */
     @Transactional
-    public Savings addToSavings(
+    @CacheEvict(value = "savings", key = "#user.id")
+    public SavingResponse addToSavings(
             UUID savingsId,
             User user,
             Double addAmount
@@ -70,13 +80,15 @@ public class SavingsService {
                 savings.getRemainingAmount() - addAmount
         );
 
-        return savings;
+        Savings saved = savingsRepository.save(savings);
+        return new SavingResponse(saved.getId(), saved.getGoalName(), saved.getAmount(), saved.getRemainingAmount(), saved.getDate());
     }
 
     /**
      * DELETE savings
      */
     @Transactional
+    @CacheEvict(value = "savings", key = "#user.id")
     public void deleteSavings(UUID savingsId, User user) {
         Savings savings = savingsRepository
                 .findById(savingsId)

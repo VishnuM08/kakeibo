@@ -43,6 +43,7 @@ public class SecurityConfig {
                                 "/auth/register",
                                 "/auth/forgot-password",
                                 "/auth/reset-password",
+                                "/auth/verify-otp",
 
                                 // ✅ Actuator (ALL, not just health)
                                 "/actuator/**",
@@ -58,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/auth/me",
                                 "/expenses/**",
+                                "/recurring-expenses/**",
                                 "/budget/**",
                                 "/savings/**"
                         ).authenticated()
