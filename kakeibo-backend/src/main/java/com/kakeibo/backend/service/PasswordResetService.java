@@ -40,7 +40,7 @@ public class PasswordResetService {
 
             // Build reset link
             String resetLink =
-                    "https://localhost:3000/reset-password?token=" + rawToken;
+                    "https://kakeibo.theaignite.app/reset-password?token=" + rawToken;
 
             // Email subject
             String subject = "Reset Your Kakeibo Password";

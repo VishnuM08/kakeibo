@@ -69,6 +69,8 @@ export default function App() {
       "--app-scale",
       displayScale.toString(),
     );
+    // Apply zoom for WebKit/Blink browsers since hardcoded px bypasses rem scaling
+    (document.documentElement.style as any).zoom = displayScale.toString();
   }, [displayScale]);
 
   // 1. Initial Preferences & Lifecycle Setup

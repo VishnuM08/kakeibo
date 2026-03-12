@@ -1,4 +1,4 @@
-﻿import {
+import {
   BarChart3,
   Calendar,
   Download,
@@ -295,7 +295,11 @@ export function AppMain({
 
         const savedUI = mapApiExpenseToUI(saved);
 
-        setExpenses((prev) => prev.map((e) => (e.id === tempId ? savedUI : e)));
+        setExpenses((prev) => {
+          const next = prev.map((e) => (e.id === tempId ? savedUI : e));
+          localStorage.setItem("kakeibo_expenses", JSON.stringify(next));
+          return next;
+        });
         await Haptics.impact({ style: ImpactStyle.Light }); // Haptic feedback on successful add
 
         await refreshBudget();
@@ -334,9 +338,11 @@ export function AppMain({
 
   const handleSaveEdit = async (updatedExpense: UIExpense) => {
     // 1️⃣ Optimistic UI update
-    setExpenses((prev) =>
-      prev.map((e) => (e.id === updatedExpense.id ? updatedExpense : e)),
-    );
+    setExpenses((prev) => {
+      const next = prev.map((e) => (e.id === updatedExpense.id ? updatedExpense : e));
+      localStorage.setItem("kakeibo_expenses", JSON.stringify(next));
+      return next;
+    });
 
     if (navigator.onLine) {
       try {
@@ -366,7 +372,11 @@ export function AppMain({
     const previousExpenses = expenses;
 
     // 1️⃣ Optimistic UI delete
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+    setExpenses((prev) => {
+      const next = prev.filter((e) => e.id !== id);
+      localStorage.setItem("kakeibo_expenses", JSON.stringify(next));
+      return next;
+    });
 
     if (navigator.onLine) {
       try {
@@ -378,6 +388,7 @@ export function AppMain({
 
         // 3️⃣ Rollback UI
         setExpenses(previousExpenses);
+        localStorage.setItem("kakeibo_expenses", JSON.stringify(previousExpenses));
       }
     } else {
       // 📴 OFFLINE → local + queue
@@ -421,23 +432,8 @@ export function AppMain({
   };
 
   useEffect(() => {
-    // Initialize sync listeners
-    initializeSyncListeners(() => {
-      // Reload expenses when sync completes
-      const syncedExpenses = getExpensesLocally();
-      // Map expenses to include icon and color based on category
-      const mappedExpenses = syncedExpenses.map((exp) => ({
-        ...exp,
-        icon: getCategoryIcon(exp.category),
-        color: getCategoryColor(exp.category),
-        time: new Date(exp.date).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        }),
-      }));
-      setExpenses(mappedExpenses);
-    });
+    // Initialize sync listeners (without forcefully corrupting UI state for now)
+    initializeSyncListeners();
 
     // // Load initial expenses from localStorage
     // const storedExpenses = getExpensesLocally();
@@ -480,13 +476,8 @@ export function AppMain({
           setExpenses(mapped);
 
           // Save to localStorage for offline use
-          apiExpenses.forEach((exp) => {
-            try {
-              saveExpenseLocally(exp as any);
-            } catch (err) {
-              // ignore local save errors
-            }
-          });
+          // We MUST save the strictly formatted mapped array, not the raw apiExpenses
+          localStorage.setItem("kakeibo_expenses", JSON.stringify(mapped));
         }
       } catch (err) {
         console.warn("Could not fetch expenses from backend:", err);

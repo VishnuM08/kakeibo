@@ -61,11 +61,9 @@ export default defineConfig(({ mode }) => {
       open: true,
       proxy: {
         "/api": {
-          target:
-            env.VITE_API_BASE_URL ||
-            env.VITE_API_KEY ||
-            "http://localhost:8080",
+          target: env.VITE_API_BASE_URL || "http://localhost:8080",
           changeOrigin: true,
+          secure: false, // Bypass SSL warnings locally if any
           rewrite: (path) => path.replace(/^\/api/, ""),
         },
       },
