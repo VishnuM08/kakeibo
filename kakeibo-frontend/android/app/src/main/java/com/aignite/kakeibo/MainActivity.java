@@ -23,7 +23,7 @@ public class MainActivity extends BridgeActivity {
         instance = this;
         registerPlugin(KakeiboNative.class);
         super.onCreate(savedInstanceState);
-        
+
         checkAndRequestPermissions();
         handleIntent(getIntent());
     }
@@ -31,7 +31,7 @@ public class MainActivity extends BridgeActivity {
     private void checkAndRequestPermissions() {
         List<String> permissionsNeeded = new ArrayList<>();
         permissionsNeeded.add(Manifest.permission.RECEIVE_SMS);
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissionsNeeded.add(Manifest.permission.POST_NOTIFICATIONS);
         }
@@ -44,7 +44,8 @@ public class MainActivity extends BridgeActivity {
         }
 
         if (!listPermissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[0]), PERMISSION_REQUEST_CODE);
+            ActivityCompat.requestPermissions(this, listPermissionsNeeded.toArray(new String[0]),
+                    PERMISSION_REQUEST_CODE);
         }
     }
 
@@ -61,8 +62,9 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void handleIntent(Intent intent) {
-        if (intent == null) return;
-        
+        if (intent == null)
+            return;
+
         String smsBody = intent.getStringExtra("sms_body");
         if (smsBody != null) {
             Log.d(TAG, "Opening from SMS Notification: " + smsBody);
@@ -81,15 +83,17 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void sendSmsToWeb(String message) {
-        if (message == null || this.bridge == null) return;
-        
+        if (message == null || this.bridge == null)
+            return;
+
         String escapedMsg = message.replace("\\", "\\\\")
-                                 .replace("'", "\\'")
-                                 .replace("\"", "\\\"")
-                                 .replace("\n", "\\n")
-                                 .replace("\r", "\\r");
-        
-        String js = "window.dispatchEvent(new CustomEvent('nativeSmsReceived', { detail: { body: '" + escapedMsg + "' } }));";
+                .replace("'", "\\'")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
+
+        String js = "window.dispatchEvent(new CustomEvent('nativeSmsReceived', { detail: { body: '" + escapedMsg
+                + "' } }));";
         Log.d(TAG, "Injecting JS to Bridge: " + js);
         this.bridge.eval(js, null);
     }

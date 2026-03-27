@@ -134,7 +134,8 @@ export function SMSTransactionsView({
           isDarkMode ? 'bg-black' : 'bg-[#f5f5f7]'
         } border-b ${
           isDarkMode ? 'border-[#2c2c2e]' : 'border-[#e5e5e7]'
-        } px-4 py-3`}
+        } px-4 pb-3`}
+        style={{ paddingTop: '60px' }}
       >
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <button
@@ -349,10 +350,9 @@ export function SMSTransactionsView({
                     className={`flex-1 h-12 rounded-[12px] flex items-center justify-center gap-2 font-semibold text-[17px] transition-all ${
                       transaction.isApproved
                         ? 'bg-green-500/20 text-green-400'
-                        : isDarkMode
-                        ? 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
-                        : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
+                        : 'text-white active:scale-95'
                     }`}
+                    style={{ backgroundColor: !transaction.isApproved && !transaction.isRejected ? '#22c55e' : undefined }}
                   >
                     <Check className="w-5 h-5" strokeWidth={2.5} />
                     Approve

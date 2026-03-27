@@ -937,19 +937,9 @@ export function AppMain({
           <div 
             className="fixed bottom-0 left-0 right-0"
             style={{ 
-              height: 'max(env(safe-area-inset-bottom, 0px), 34px)', 
-              backgroundColor: isDarkMode ? "#000000" : '#ffffff',
-              borderTop: isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)',
-              zIndex: 10000
-            }}
-          />
-
-          <div 
-            className="fixed bottom-0 left-0 right-0"
-            style={{ 
-              backgroundColor: isDarkMode ? "#000000" : '#ffffff',
-              borderTop: isDarkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.1)',
-              paddingBottom: 'env(safe-area-inset-bottom, 12px)',
+              backgroundColor: isDarkMode ? "#1c1c1e" : "#ffffff",
+              borderTop: isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+              paddingBottom: 'env(safe-area-inset-bottom, 20px)',
               paddingTop: '12px',
               display: 'flex',
               flexDirection: 'row',
@@ -961,37 +951,50 @@ export function AppMain({
               zIndex: 10001
             }}
           >
-        <button onClick={() => setActiveTab("home")} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', color: activeTab === 'home' ? '#007aff' : '#8e8e93', position: 'relative', transition: 'all 0.2s' }}>
-          <Calendar className="w-6 h-6" strokeWidth={activeTab === 'home' ? 2.5 : 2} />
-          <span style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2px' }}>Home</span>
-          {activeTab === 'home' && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', backgroundColor: '#007aff', borderRadius: '0 0 6px 6px' }} />}
-        </button>
-
-        <button onClick={() => setActiveTab("sms")} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', color: activeTab === 'sms' ? '#007aff' : '#8e8e93', position: 'relative', transition: 'all 0.2s' }}>
-          <div style={{ position: 'relative' }}>
-            <Smartphone className="w-6 h-6" strokeWidth={activeTab === 'sms' ? 2.5 : 2} />
-            {smsTransactions.filter(t => !t.isProcessed).length > 0 && (
-              <span style={{ position: 'absolute', top: '-8px', right: '-12px', backgroundColor: '#ff3b30', color: 'white', borderRadius: '12px', minWidth: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', border: isDarkMode ? '2px solid #000000' : '2px solid white', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>
-                {smsTransactions.filter(t => !t.isProcessed).length}
-              </span>
-            )}
+            {[
+              { id: 'home', icon: Calendar, label: 'Home' },
+              { id: 'sms', icon: Smartphone, label: 'SMS Alerts', hasBadge: true },
+              { id: 'stats', icon: BarChart3, label: 'Stats' },
+              { id: 'bills', icon: Repeat, label: 'Bills' },
+            ].map((item) => {
+              const isActive = activeTab === item.id;
+              const Icon = item.icon;
+              return (
+                <button 
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as any)} 
+                  className="flex-1 relative flex flex-col items-center justify-center gap-1 py-2"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: isActive ? '#007aff' : '#8e8e93' }}
+                >
+                  <div className="relative">
+                    <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
+                    {item.id === 'sms' && smsTransactions.filter(t => !t.isProcessed).length > 0 && (
+                      <span className="absolute -top-1 -right-2.5 bg-[#ff3b30] text-white rounded-full min-w-[19px] h-[19px] flex items-center justify-center text-[10px] font-black border-2 border-white shadow-md z-10">
+                        {smsTransactions.filter(t => !t.isProcessed).length}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: '4px' }}>
+                    {item.label}
+                  </span>
+                  {isActive && (
+                    <motion.div 
+                      layoutId="activeTab"
+                      style={{ 
+                        position: 'absolute', 
+                        bottom: '2px', 
+                        width: '24px', 
+                        height: '3px', 
+                        backgroundColor: '#007aff', 
+                        borderRadius: '3px',
+                        boxShadow: '0 1px 4px rgba(0,122,255,0.4)'
+                      }} 
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
-          <span style={{ fontSize: '9px', lineHeight: '1', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1px', textAlign: 'center', width: '100%', display: 'block', marginTop: '1px' }}>SMS Transactions</span>
-          {activeTab === 'sms' && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', backgroundColor: '#007aff', borderRadius: '0 0 6px 6px' }} />}
-        </button>
-        
-        <button onClick={() => setActiveTab("stats")} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', color: activeTab === 'stats' ? '#007aff' : '#8e8e93', position: 'relative', transition: 'all 0.2s' }}>
-          <BarChart3 className="w-6 h-6" strokeWidth={activeTab === 'stats' ? 2.5 : 2} />
-          <span style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2px' }}>Stats</span>
-          {activeTab === 'stats' && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', backgroundColor: '#007aff', borderRadius: '0 0 6px 6px' }} />}
-        </button>
-
-        <button onClick={() => setActiveTab("bills")} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', color: activeTab === 'bills' ? '#007aff' : '#8e8e93', position: 'relative', transition: 'all 0.2s' }}>
-          <Repeat className="w-6 h-6" strokeWidth={activeTab === 'bills' ? 2.5 : 2} />
-          <span style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2px' }}>Bills</span>
-          {activeTab === 'bills' && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', backgroundColor: '#007aff', borderRadius: '0 0 6px 6px' }} />}
-        </button>
-      </div>
         </>
       )}
 
