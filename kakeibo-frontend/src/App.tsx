@@ -19,6 +19,11 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
+import { HelpCircle, Smartphone } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { message } from "antd";
+
+const KakeiboNative = registerPlugin<any>('KakeiboNative');
 
 /**
  * App Wrapper Component
@@ -35,6 +40,37 @@ export default function App() {
   );
   const [user, setUser] = useState<any>(null);
   const [displayScale, setDisplayScale] = useState(1.0);
+  const [showSMSDisclosure, setShowSMSDisclosure] = useState(false);
+
+  // Check SMS permission on mount for Android background detection (Global)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
+    
+    const checkPermission = async () => {
+      // Small delay to ensure bridge is fully ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        console.log("[SMS] Checking background permission...");
+        const { status } = await KakeiboNative.checkSmsPermission();
+        if (status !== 'granted') {
+          setShowSMSDisclosure(true);
+        }
+      } catch (e) {
+        console.error("[SMS] Permission check failed, falling back to disclosure", e);
+        setShowSMSDisclosure(true);
+      }
+    };
+    checkPermission();
+  }, []);
+
+  const handleAllowSMS = async () => {
+    setShowSMSDisclosure(false);
+    try {
+      await KakeiboNative.requestSmsPermission();
+    } catch (e) {
+      console.error("[SMS] Failed to request permission", e);
+    }
+  };
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -392,62 +428,126 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      {/* Auth Flow */}
-      {!isAuthenticated ? (
-        <>
-          <Route
-            path="/login"
-            element={
-              <AuthScreen
-                onAuthSuccess={handleAuthSuccess}
-                isDarkMode={isDark}
-              />
-            }
-          />
-          <Route path="/reset-password" element={resetPasswordElement} />
-          <Route path="/verify-email" element={verifyEmailElement} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </>
-      ) : (
-        <>
-          {/* Main App Routes (all render MainContent which handles modals via URL) */}
-          <Route path="/" element={mainContentElement} />
-          <Route path="/add-expense" element={mainContentElement} />
-          <Route path="/edit-expense/:id" element={mainContentElement} />
-          <Route path="/analytics" element={mainContentElement} />
-          <Route path="/calendar" element={mainContentElement} />
-          <Route path="/savings" element={mainContentElement} />
-          <Route path="/recurring" element={mainContentElement} />
-          <Route path="/bill-reminders" element={mainContentElement} />
-          <Route path="/help" element={mainContentElement} />
-          <Route path="/export" element={mainContentElement} />
+    <>
+      <Routes>
+        {/* Auth Flow */}
+        {!isAuthenticated ? (
+          <>
+            <Route
+              path="/login"
+              element={
+                <AuthScreen
+                  onAuthSuccess={handleAuthSuccess}
+                  isDarkMode={isDark}
+                />
+              }
+            />
+            <Route path="/reset-password" element={resetPasswordElement} />
+            <Route path="/verify-email" element={verifyEmailElement} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </>
+        ) : (
+          <>
+            {/* Main App Routes (all render MainContent which handles modals via URL) */}
+            <Route path="/" element={mainContentElement} />
+            <Route path="/add-expense" element={mainContentElement} />
+            <Route path="/edit-expense/:id" element={mainContentElement} />
+            <Route path="/analytics" element={mainContentElement} />
+            <Route path="/calendar" element={mainContentElement} />
+            <Route path="/savings" element={mainContentElement} />
+            <Route path="/recurring" element={mainContentElement} />
+            <Route path="/bill-reminders" element={mainContentElement} />
+            <Route path="/help" element={mainContentElement} />
+            <Route path="/export" element={mainContentElement} />
 
-          <Route path="/budget-settings" element={mainContentElement} />
-          <Route path="/search" element={mainContentElement} />
+            <Route path="/budget-settings" element={mainContentElement} />
+            <Route path="/search" element={mainContentElement} />
 
-          <Route
-            path="/settings"
-            element={
-              <SettingsView
-                onClose={() => navigate("/")}
-                onLogout={handleLogout}
-                onEnablePINLock={handleEnablePINLock}
-                isPINEnabled={isPINEnabled}
-                userName={user?.name || "User"}
-                userEmail={user?.email || "user@example.com"}
-                isDarkMode={isDark}
-                themeMode={themeMode}
-                onToggleDarkMode={toggleDarkMode}
-                displayScale={displayScale}
-                onSetDisplayScale={setDisplayScale}
-              />
-            }
-          />
-          {/* Catch-all for authenticated users */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </>
-      )}
-    </Routes>
+            <Route
+              path="/settings"
+              element={
+                <SettingsView
+                  onClose={() => navigate("/")}
+                  onLogout={handleLogout}
+                  onEnablePINLock={handleEnablePINLock}
+                  isPINEnabled={isPINEnabled}
+                  userName={user?.name || "User"}
+                  userEmail={user?.email || "user@example.com"}
+                  isDarkMode={isDark}
+                  themeMode={themeMode}
+                  onToggleDarkMode={toggleDarkMode}
+                  displayScale={displayScale}
+                  onSetDisplayScale={setDisplayScale}
+                />
+              }
+            />
+            {/* Catch-all for authenticated users */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
+        )}
+      </Routes>
+
+      {/* Prominent Disclosure for SMS Permission */}
+      <AnimatePresence>
+        {showSMSDisclosure && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100000] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={`max-w-md w-full p-8 rounded-[40px] shadow-2xl text-center ${isDark ? "bg-[#1c1c1e] text-white" : "bg-white text-black"}`}
+            >
+              <div className="w-16 h-16 bg-[#007aff]/15 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Smartphone className="w-8 h-8 text-[#007aff]" />
+              </div>
+              <h2 className="text-2xl font-bold mb-3">Automatic Expense Tracking</h2>
+              <p className={`text-[15px] leading-relaxed mb-6 ${isDark ? "text-white/60" : "text-black/60"}`}>
+                Track your finances effortlessly without opening the app for every single purchase.
+              </p>
+
+              <div className={`text-left p-5 rounded-[24px] mb-4 ${isDark ? "bg-white/5" : "bg-black/5"}`}>
+                <h3 className="text-[13px] font-bold uppercase tracking-widest mb-2 opacity-50 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-[#007aff] rounded-full"></span>
+                  Why we use this?
+                </h3>
+                <p className="text-[14px] leading-relaxed font-medium">
+                  To automatically detect bank transaction alerts (HDFC, SBI, ICICI, etc.) even when the app is closed, ensuring your spendings are recorded in real-time without manual entry.
+                </p>
+              </div>
+
+              <div className={`text-left p-5 rounded-[24px] mb-8 border ${isDark ? "border-white/10 bg-black/20" : "border-black/5 bg-black/5"}`}>
+                <h3 className="text-[13px] font-bold uppercase tracking-widest mb-2 text-[#007aff] flex items-center gap-2">
+                  Privacy Disclaimer
+                </h3>
+                <ul className="text-[13px] leading-relaxed opacity-70 space-y-1">
+                  <li>• No cloud storage. All SMS data is processed 100% locally.</li>
+                  <li>• Only financial transaction alerts are detected.</li>
+                  <li>• Your personal conversations and OTPs are NEVER accessed.</li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleAllowSMS}
+                  className="w-full py-5 rounded-[20px] bg-[#007aff] text-white font-bold text-[17px] active:scale-95 transition-transform shadow-lg shadow-[#007aff]/20"
+                >
+                  Confirm & Enable
+                </button>
+                <button
+                  onClick={() => setShowSMSDisclosure(false)}
+                  className={`w-full py-4 rounded-[20px] font-semibold text-[17px] active:scale-95 transition-transform ${isDark ? "text-white/40" : "text-black/40"}`}
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

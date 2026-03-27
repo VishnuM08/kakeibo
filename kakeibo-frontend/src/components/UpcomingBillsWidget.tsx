@@ -127,7 +127,7 @@ export function UpcomingBillsWidget({ onOpenBills, isDarkMode }: UpcomingBillsWi
                   ? `${overdueItems.length} overdue item${overdueItems.length > 1 ? 's' : ''}` 
                   : hasUrgent
                     ? `${urgentItems.length} payment${urgentItems.length > 1 ? 's' : ''} next 7 days`
-                    : 'Everything organized!'
+                    : ''
                 }
               </p>
             </div>
@@ -156,13 +156,6 @@ export function UpcomingBillsWidget({ onOpenBills, isDarkMode }: UpcomingBillsWi
                     <p className={`text-[15px] font-bold truncate ${isDarkMode ? 'text-white' : 'text-black'}`}>
                       {item.name}
                     </p>
-                    {item.type === 'recurring' && (
-                      <span className={`text-[9px] px-1.2 py-0.2 rounded-full font-black uppercase ${
-                        isDarkMode ? 'bg-white/10 text-white/50' : 'bg-black/10 text-black/40'
-                      }`}>
-                        Auto
-                      </span>
-                    )}
                   </div>
                   <p className={`text-[12px] font-bold ${
                     isOverdue

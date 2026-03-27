@@ -5,7 +5,7 @@ import { UIExpense } from "../types/UIExpense";
 interface CalendarViewProps {
   expenses: UIExpense[];
   onClose: () => void;
-  onDateClick: (date: Date, dayExpenses: UIExpense[]) => void;
+  onDayClick: (date: Date, dayExpenses: UIExpense[]) => void;
   isDarkMode?: boolean;
   inline?: boolean;
 }
@@ -13,7 +13,7 @@ interface CalendarViewProps {
 export function CalendarView({
   expenses,
   onClose,
-  onDateClick,
+  onDayClick,
   isDarkMode,
   inline = false,
 }: CalendarViewProps) {
@@ -39,16 +39,6 @@ export function CalendarView({
   const nextMonth = () => {
     setCurrentDate(new Date(year, month + 1, 1));
   };
-
-  // const getExpensesForDate = (day: number): UIExpense[] => {
-  //   const date = new Date(year, month, day);
-  //   const dateStr = date.toISOString().split("T")[0];
-
-  //   return expenses.filter((expense) => {
-  //     const expenseDate = new Date(expense.date).toISOString().split("T")[0];
-  //     return expenseDate === dateStr;
-  //   });
-  // };
 
   const formatDate = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
@@ -85,7 +75,7 @@ export function CalendarView({
   const handleDateClick = (day: number) => {
     const date = new Date(year, month, day);
     const dayExpenses = getExpensesForDate(day);
-    onDateClick(date, dayExpenses);
+    onDayClick(date, dayExpenses);
   };
 
   // Generate calendar days
@@ -145,12 +135,8 @@ export function CalendarView({
       className={
         inline
           ? "w-full h-full p-4"
-          : `fixed inset-0 z-[100000] overflow-y-auto ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"} px-5`
+          : `fixed inset-0 z-50 overflow-y-auto ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"} px-5 py-6`
       }
-      style={!inline ? { 
-        paddingTop: 'min(env(safe-area-inset-top, 24px), 40px)', 
-        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' 
-      } : {}}
     >
       <div
         className={inline ? "w-full h-full flex flex-col" : "max-w-lg mx-auto"}

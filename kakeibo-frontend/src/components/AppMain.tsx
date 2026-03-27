@@ -76,9 +76,13 @@ import {
   mapApiExpenseToUI,
   mapUIToBackendExpense,
 } from "../utils/expenseMapper";
-import { ParsedTransaction, getMockSMSTransactions } from "../utils/smsParser";
+import { ParsedTransaction, parseTransactionSMS } from "../utils/smsParser";
 import { AddRecurringExpenseModal } from "./AddRecurringExpenseModal";
 import { BudgetOverviewDetails } from "./BudgetOverviewDetails";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Preferences } from "@capacitor/preferences";
+
+const KakeiboNative = registerPlugin<any>('KakeiboNative');
 
 /**
  * Main App Component
@@ -140,11 +144,12 @@ export function AppMain({
 
   // Tab State
   const [activeTab, setActiveTab ] = useState<'home' | 'sms' | 'stats' | 'bills'>('home');
-  const [smsTransactions, setSmsTransactions] = useState<ParsedTransaction[]>(getMockSMSTransactions());
+  const [smsTransactions, setSmsTransactions] = useState<ParsedTransaction[]>([]);
 
   // Global Recurring Modal State
   const [isGlobalRecurringModalOpen, setIsGlobalRecurringModalOpen] = useState(false);
   const [selectedRecurringExpense, setSelectedRecurringExpense] = useState<RecurringExpense | undefined>(undefined);
+
 
   const fetchExpenses = async () => {
     setIsLoading(true);
@@ -246,6 +251,71 @@ export function AppMain({
     isGlobalRecurringModalOpen ||
     isBudgetOverviewExpanded;
 
+
+  // Native Android SMS User Consent Listener
+  useEffect(() => {
+    // Load persisted SMS transactions on mount
+    const loadSMS = async () => {
+      const { value } = await Preferences.get({ key: "pending_sms_transactions" });
+      if (value) {
+        try {
+          const parsed = JSON.parse(value).map((t: any) => ({
+            ...t,
+            date: new Date(t.date)
+          }));
+          setSmsTransactions(parsed);
+        } catch (e) {
+          console.error("Failed to parse persisted SMS", e);
+        }
+      }
+    };
+    loadSMS();
+
+    const handleNativeSms = (event: any) => {
+      const { body } = event.detail || {};
+      if (body) {
+        const parsed = parseTransactionSMS(body);
+        if (parsed) {
+          setSmsTransactions(prev => {
+            if (prev.some(t => t.rawHash === parsed.rawHash)) return prev;
+            message.success(`Transaction detected: ₹${parsed.amount}`);
+            return [parsed, ...prev];
+          });
+        }
+      }
+    };
+
+    // Check for pending SMS from native bridge (e.g. from notification click during cold start)
+    const checkPendingSms = async () => {
+      if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
+      try {
+        const { sms } = await (KakeiboNative as any).getPendingSms();
+        if (sms) {
+          console.log("[SMS] Found pending SMS on startup:", sms);
+          handleNativeSms({ detail: { body: sms } });
+          await (KakeiboNative as any).clearPendingSms();
+        }
+      } catch (e) {
+        console.error("[SMS] Failed to get pending SMS", e);
+      }
+    };
+
+    window.addEventListener('nativeSmsReceived', handleNativeSms);
+    const timer = setTimeout(checkPendingSms, 2000); // 2s delay ensure stability
+
+    return () => {
+      window.removeEventListener('nativeSmsReceived', handleNativeSms);
+      clearTimeout(timer);
+    };
+  }, []);
+
+  // Save SMS transactions to local storage whenever they change
+  useEffect(() => {
+    Preferences.set({
+      key: "pending_sms_transactions",
+      value: JSON.stringify(smsTransactions)
+    });
+  }, [smsTransactions]);
 
   const currentMonth = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -563,9 +633,6 @@ export function AppMain({
                 </motion.button>
               </motion.div>
 
-              <div className="mt-2 mb-6 upcoming-bills-section">
-                <UpcomingBillsWidget onOpenBills={() => setActiveTab("bills")} isDarkMode={isDarkMode} />
-              </div>
 
               <section className="mb-5 todays-expenses-section">
                 <div className="flex items-center justify-between mb-4">
@@ -613,6 +680,10 @@ export function AppMain({
                   </AnimatePresence>
                 </motion.div>
               </section>
+
+              <div className="mt-8 mb-8 upcoming-bills-section">
+                <UpcomingBillsWidget onOpenBills={() => setActiveTab("bills")} isDarkMode={isDarkMode} />
+              </div>
 
               <button onClick={() => navigate("/calendar")} className={`w-full py-[15px] px-6 calendar-section rounded-[14px] transition-all duration-150 flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.97] font-semibold text-[17px] border ${isDarkMode ? "bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white border-white/10" : "bg-white hover:bg-gray-50 text-[#007aff] border-black/12 shadow-sm"}`}>
                 <Calendar className="w-5 h-5" strokeWidth={2.5} />
@@ -695,7 +766,7 @@ export function AppMain({
             key="calendar-view"
             expenses={expenses}
             onClose={() => navigate("/")}
-            onDateClick={handleDateClick}
+            onDayClick={handleDateClick}
             isDarkMode={isDarkMode}
           />
         )}
@@ -905,7 +976,7 @@ export function AppMain({
               </span>
             )}
           </div>
-          <span style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.2px' }}>Alerts</span>
+          <span style={{ fontSize: '9px', lineHeight: '1', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1px', textAlign: 'center', width: '100%', display: 'block', marginTop: '1px' }}>SMS Transactions</span>
           {activeTab === 'sms' && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', backgroundColor: '#007aff', borderRadius: '0 0 6px 6px' }} />}
         </button>
         
@@ -921,8 +992,9 @@ export function AppMain({
           {activeTab === 'bills' && <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '3px', backgroundColor: '#007aff', borderRadius: '0 0 6px 6px' }} />}
         </button>
       </div>
-      </>
+        </>
       )}
+
     </>
   );
 }
