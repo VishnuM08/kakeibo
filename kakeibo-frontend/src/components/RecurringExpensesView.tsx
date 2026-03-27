@@ -201,6 +201,7 @@ export function RecurringExpensesView({
         isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
       }`}
       style={{
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)',
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 110px)',
       }}
     >

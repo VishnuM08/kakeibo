@@ -135,8 +135,9 @@ export function CalendarView({
       className={
         inline
           ? "w-full h-full p-4"
-          : `fixed inset-0 z-50 overflow-y-auto ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"} px-5 py-6`
+          : `fixed inset-0 z-50 overflow-y-auto ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"} px-5 pb-6`
       }
+      style={!inline ? { paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)" } : {}}
     >
       <div
         className={inline ? "w-full h-full flex flex-col" : "max-w-lg mx-auto"}

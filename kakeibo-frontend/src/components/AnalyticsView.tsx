@@ -70,7 +70,7 @@ export function AnalyticsView({ expenses, onClose, isDarkMode }: AnalyticsViewPr
     <div 
       className={`fixed inset-0 z-[100] overflow-y-auto ${isDarkMode ? 'bg-[#121212]' : 'bg-[#f5f5f7]'}`}
       style={{ 
-        paddingTop: 'min(env(safe-area-inset-top, 24px), 40px)', 
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)', 
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 90px)' 
       }}
     >

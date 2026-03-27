@@ -2,6 +2,9 @@ package com.aignite.kakeibo;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.os.Build;
+import java.util.ArrayList;
+import java.util.List;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -17,8 +20,15 @@ public class KakeiboNative extends Plugin {
     @PluginMethod
     public void requestSmsPermission(PluginCall call) {
         if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(getActivity(), 
-                new String[]{Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS}, 101);
+            List<String> perms = new ArrayList<>();
+            perms.add(Manifest.permission.RECEIVE_SMS);
+            perms.add(Manifest.permission.READ_SMS);
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                perms.add(Manifest.permission.POST_NOTIFICATIONS);
+            }
+            
+            ActivityCompat.requestPermissions(getActivity(), perms.toArray(new String[0]), 101);
             call.resolve();
         } else {
             JSObject ret = new JSObject();
@@ -35,6 +45,7 @@ public class KakeiboNative extends Plugin {
         } else {
             ret.put("status", "denied");
         }
+        call.resolve(ret);
     }
 
     @PluginMethod
