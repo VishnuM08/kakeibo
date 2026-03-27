@@ -101,7 +101,7 @@ export function SavingsGoalsView({
 
   return (
     <div
-      className={`fixed inset-0 z-50 overflow-y-auto pt-safe pb-safe ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
+      className={`fixed inset-0 z-50 overflow-y-auto pt-safe pb-[90px] ${isDarkMode ? "bg-[#121212]" : "bg-[#f5f5f7]"}`}
     >
       <div className="max-w-lg mx-auto px-5 py-6">
         {/* Header */}

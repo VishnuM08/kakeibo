@@ -1,6 +1,8 @@
+import React from "react";
 import { motion } from "motion/react";
 import { Repeat, ChevronRight, AlertCircle } from "lucide-react";
-import { RecurringExpense } from "./RecurringExpensesView";
+import { RecurringExpense } from "../services/api";
+import { calculateNextOccurrence, isDue as checkIsDue } from "../utils/recurringUtils";
 
 interface RecurringExpensesWidgetProps {
   onOpenRecurring: () => void;
@@ -11,160 +13,107 @@ export function RecurringExpensesWidget({
   onOpenRecurring,
   isDarkMode,
 }: RecurringExpensesWidgetProps) {
+  // Read from localStorage (synced by RecurringExpensesView)
   const expenses: RecurringExpense[] = JSON.parse(
     localStorage.getItem("kakeibo_recurring_expenses") || "[]",
   );
 
-  // Get active expenses only
-  const activeExpenses = expenses.filter((exp) => exp.isActive);
+  // Map to include nextOccurrence for each and filter active
+  const activeExpenses = expenses
+    .map((exp) => ({
+      ...exp,
+      nextOccurrence: calculateNextOccurrence(
+        exp.startDate,
+        exp.frequency,
+        exp.lastGenerated,
+      ),
+    }))
+    .filter((exp) => exp.isActive);
 
-  // Check if any are due
-  const isDue = (nextOccurrence: string): boolean => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const due = new Date(nextOccurrence);
-    due.setHours(0, 0, 0, 0);
-    return due <= today;
-  };
-
-  const dueExpenses = activeExpenses.filter((exp) => isDue(exp.nextOccurrence));
-
-  // Don't show widget if no active expenses
-  if (activeExpenses.length === 0) return null;
-
-  // Calculate monthly projection
-  const monthlyProjection = activeExpenses.reduce((sum, exp) => {
-    let monthlyAmount = 0;
-    switch (exp.frequency) {
-      case "daily":
-        monthlyAmount = exp.amount * 30;
-        break;
-      case "weekly":
-        monthlyAmount = exp.amount * 4;
-        break;
-      case "monthly":
-        monthlyAmount = exp.amount;
-        break;
-      case "yearly":
-        monthlyAmount = exp.amount / 12;
-        break;
-    }
-    return sum + monthlyAmount;
-  }, 0);
+  // Check which ones are due
+  const dueExpenses = activeExpenses.filter((exp) =>
+    checkIsDue(exp.nextOccurrence),
+  );
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.18 }}
-      className="mb-5"
+      whileHover={{ scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+      onClick={onOpenRecurring}
+      className={`relative overflow-hidden rounded-3xl p-5 cursor-pointer border transition-all ${
+        isDarkMode
+          ? "bg-[#1c1c1e] border-white/10 hover:bg-white/[0.07]"
+          : "bg-white border-black/5 shadow-sm hover:shadow-md"
+      }`}
     >
-      <button
-        onClick={onOpenRecurring}
-        className={`w-full p-4 rounded-[20px] border transition-all active:scale-[0.98] ${
-          dueExpenses.length > 0
-            ? isDarkMode
-              ? "bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/15"
-              : "bg-purple-50 border-purple-200 hover:bg-purple-100"
-            : isDarkMode
-              ? "bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/15"
-              : "bg-blue-50 border-blue-200 hover:bg-blue-100"
-        }`}
-      >
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            {dueExpenses.length > 0 ? (
-              <AlertCircle
-                className={`w-5 h-5 ${isDarkMode ? "text-purple-400" : "text-purple-600"}`}
-                strokeWidth={2.5}
-              />
-            ) : (
-              <Repeat
-                className={`w-5 h-5 ${isDarkMode ? "text-blue-400" : "text-blue-600"}`}
-                strokeWidth={2.5}
-              />
-            )}
-            <h3
-              className={`text-[17px] font-semibold ${
-                dueExpenses.length > 0
-                  ? isDarkMode
-                    ? "text-purple-400"
-                    : "text-purple-700"
-                  : isDarkMode
-                    ? "text-blue-400"
-                    : "text-blue-700"
-              }`}
-            >
-              Recurring Expenses
-            </h3>
-          </div>
-          <ChevronRight
-            className={`w-5 h-5 ${
-              dueExpenses.length > 0
-                ? isDarkMode
-                  ? "text-purple-400"
-                  : "text-purple-600"
-                : isDarkMode
-                  ? "text-blue-400"
-                  : "text-blue-600"
-            }`}
+      <div className="flex items-center justify-between mb-4">
+        <div
+          className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+            isDarkMode ? "bg-blue-500/20" : "bg-blue-50"
+          }`}
+        >
+          <Repeat
+            className={`w-5 h-5 ${isDarkMode ? "text-blue-400" : "text-blue-600"}`}
           />
         </div>
+        <ChevronRight
+          className={`w-5 h-5 opacity-30 ${isDarkMode ? "text-white" : "text-black"}`}
+        />
+      </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p
-              className={`text-[13px] mb-1 ${
-                isDarkMode ? "text-white/50" : "text-black/50"
-              }`}
-            >
-              Monthly Impact
-            </p>
-            <p
-              className={`text-[20px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
-            >
-              ₹{monthlyProjection.toFixed(2)}
-            </p>
-          </div>
-          <div>
-            <p
-              className={`text-[13px] mb-1 ${
-                isDarkMode ? "text-white/50" : "text-black/50"
-              }`}
-            >
-              Active / Due Now
-            </p>
-            <p
-              className={`text-[20px] font-bold ${
-                dueExpenses.length > 0
-                  ? isDarkMode
-                    ? "text-purple-400"
-                    : "text-purple-700"
-                  : isDarkMode
-                    ? "text-white"
-                    : "text-black"
-              }`}
-            >
-              {activeExpenses.length} / {dueExpenses.length}
-            </p>
-          </div>
+      <div className="space-y-1">
+        <h3
+          className={`text-[17px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
+        >
+          Recurring
+        </h3>
+        <p
+          className={`text-[13px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}
+        >
+          {activeExpenses.length} active bills
+        </p>
+      </div>
+
+      {dueExpenses.length > 0 ? (
+        <div
+          className={`mt-4 pt-3 border-t flex items-center gap-2 ${
+            isDarkMode ? "border-white/5" : "border-black/5"
+          }`}
+        >
+          <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+          <p className="text-[12px] font-semibold text-orange-500">
+            {dueExpenses.length} payment{dueExpenses.length > 1 ? "s" : ""} due
+          </p>
         </div>
-
-        {dueExpenses.length > 0 && (
-          <div
-            className={`mt-3 pt-3 border-t ${
-              isDarkMode ? "border-purple-500/20" : "border-purple-300"
-            }`}
+      ) : activeExpenses.length > 0 ? (
+        <div
+          className={`mt-4 pt-3 border-t flex items-center gap-2 ${
+            isDarkMode ? "border-white/5" : "border-black/5"
+          }`}
+        >
+          <div className="w-2 h-2 rounded-full bg-green-500" />
+          <p
+            className={`text-[12px] font-medium ${isDarkMode ? "text-white/40" : "text-black/40"}`}
           >
-            <p
-              className={`text-[13px] ${isDarkMode ? "text-purple-400/70" : "text-purple-600/70"}`}
-            >
-              {dueExpenses.length} expense{dueExpenses.length !== 1 ? "s" : ""}{" "}
-              ready to process
-            </p>
-          </div>
-        )}
-      </button>
+            All caught up
+          </p>
+        </div>
+      ) : (
+        <div
+          className={`mt-4 pt-3 border-t flex items-center gap-2 ${
+            isDarkMode ? "border-white/5" : "border-black/5"
+          }`}
+        >
+          <AlertCircle
+            className={`w-3.5 h-3.5 ${isDarkMode ? "text-white/20" : "text-black/20"}`}
+          />
+          <p
+            className={`text-[12px] font-medium ${isDarkMode ? "text-white/20" : "text-black/20"}`}
+          >
+            No recurring bills
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 }

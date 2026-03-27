@@ -1,62 +1,31 @@
-import { X, Upload, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Trash2, Check, Utensils, ShoppingCart, Car, Coffee, Home, Film, Heart, Zap, TrendingUp, MoreHorizontal } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "motion/react";
-import { Expense } from "../services/api";
+import { motion } from "motion/react";
+import { toast, Toaster } from "../utils/toast";
 
 /**
- * Edit Expense Modal Component
- *
- * BACKEND INTEGRATION:
- * - Calls updateExpense API when user saves changes
- * - Handles receipt upload via uploadReceipt API
- * - Updates are sent to Spring Boot backend via PUT /api/expenses/{id}
+ * Edit Expense Modal Component (Premium UI)
  */
 
-// Category configuration with icons (matching AddExpenseModal)
+// Category configuration (perfect match with AddExpenseModal)
 const categories = [
-  {
-    value: "food",
-    label: "Food",
-    icon: "🍴",
-    color: "from-[#ff6b6b] to-[#ee5a6f]",
-  },
-  {
-    value: "transport",
-    label: "Transport",
-    icon: "🚂",
-    color: "from-[#4ecdc4] to-[#44a08d]",
-  },
-  {
-    value: "coffee",
-    label: "Coffee",
-    icon: "☕",
-    color: "from-[#f7b731] to-[#fa8231]",
-  },
-  {
-    value: "shopping",
-    label: "Shopping",
-    icon: "🛍️",
-    color: "from-[#a29bfe] to-[#6c5ce7]",
-  },
-  {
-    value: "entertainment",
-    label: "Entertainment",
-    icon: "🎬",
-    color: "from-[#fd79a8] to-[#e84393]",
-  },
-  {
-    value: "utilities",
-    label: "Utilities",
-    icon: "⚡",
-    color: "from-[#00b894] to-[#00cec9]",
-  },
-  {
-    value: "other",
-    label: "Other",
-    icon: "⋯",
-    color: "from-[#b2bec3] to-[#636e72]",
-  },
+  { id: 'food', name: 'Food', icon: <Utensils className="w-5 h-5" />, color: '#FF6B6B' },
+  { id: 'groceries', name: 'Groceries', icon: <ShoppingCart className="w-5 h-5" />, color: '#4ECDC4' },
+  { id: 'transport', name: 'Transport', icon: <Car className="w-5 h-5" />, color: '#45B7D1' },
+  { id: 'coffee', name: 'Coffee', icon: <Coffee className="w-5 h-5" />, color: '#FFA07A' },
+  { id: 'home', name: 'Home', icon: <Home className="w-5 h-5" />, color: '#98D8C8' },
+  { id: 'entertainment', name: 'Fun', icon: <Film className="w-5 h-5" />, color: '#F7B731' },
+  { id: 'health', name: 'Health', icon: <Heart className="w-5 h-5" />, color: '#FA8072' },
+  { id: 'bills', name: 'Bills', icon: <Zap className="w-5 h-5" />, color: '#6C5CE7' },
+  { id: 'shopping', name: 'Shopping', icon: <TrendingUp className="w-5 h-5" />, color: '#FD79A8' },
+];
+
+// Fallback categories for legacy data
+const legacyCategories = [
+  ...categories,
+  { id: 'utilities', name: 'Utilities', icon: <Zap className="w-5 h-5" />, color: '#00b894' },
+  { id: 'other', name: 'Other', icon: <MoreHorizontal className="w-5 h-5" />, color: '#b2bec3' },
 ];
 
 interface EditExpenseModalProps {
@@ -76,11 +45,11 @@ export function EditExpenseModal({
   onDelete,
   isDarkMode = false,
 }: EditExpenseModalProps) {
-  const [description, setDescription] = useState(expense.description);
-  const [category, setCategory] = useState(expense.category);
-  const [amount, setAmount] = useState(expense.amount.toString());
+  const [description, setDescription] = useState(expense.description || "");
+  const [category, setCategory] = useState(expense.category || "");
+  const [amount, setAmount] = useState(expense.amount?.toString() || "");
 
-  // Scroll Look
+  // Scroll Lock
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -94,18 +63,20 @@ export function EditExpenseModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = value.split('.');
+    if (parts.length > 2) return;
+    if (parts[1] && parts[1].length > 2) return;
+    setAmount(value);
+  };
 
-    if (!description.trim() || !category || !amount) {
-      return;
-    }
+  const isFormValid = (amount && parseFloat(amount) > 0) && category;
+
+  const handleSubmit = async () => {
+    if (!isFormValid) return;
 
     const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      return;
-    }
-
     const updatedExpense: any = {
       ...expense,
       description: description.trim(),
@@ -113,9 +84,6 @@ export function EditExpenseModal({
       amount: numAmount,
       updatedAt: new Date().toISOString(),
     };
-
-    // TODO: BACKEND INTEGRATION - Call updateExpense API
-    // await updateExpense(expense.id, updatedExpense);
 
     onSave(updatedExpense);
     onClose();
@@ -128,186 +96,180 @@ export function EditExpenseModal({
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  const categoryInfo = categories.find((cat) => cat.value === category);
-
-  if (!isOpen) return null;
-
   return createPortal(
-    <div
-      className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 pt-10 safe-top sm:items-center sm:pt-0"
-      style={{
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-      }}
-      onClick={handleOverlayClick}
-    >
-      <motion.div
-        className={`relative rounded-[28px] sm:rounded-[28px] w-full max-w-md p-5 pb-6 sm:p-6 sm:pb-8 shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar ${
-          isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
-        }`}
-      >
-        {/* Drag Handle (Mobile only) */}
-        <div className="w-12 h-1.5 bg-gray-300/30 dark:bg-gray-600/30 rounded-full mx-auto mb-4 mt-[-4px] sm:hidden" />
+    <div className={`fixed inset-0 z-[100000] h-[100dvh] w-screen flex flex-col items-center ${isDarkMode ? 'bg-black' : 'bg-[#f5f5f7]'} transition-colors duration-300`}>
+      <Toaster position="top-center" isDarkMode={isDarkMode} />
+      
+      <div className="w-full max-w-md h-full flex flex-col relative overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2
-            className={`text-[28px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}
-          >
-            Edit Expense
-          </h2>
-          <button
-            onClick={onClose}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-              isDarkMode
-                ? "bg-[#2c2c2e] hover:bg-[#3c3c3e]"
-                : "bg-[#f5f5f7] hover:bg-[#e5e5e7]"
-            }`}
-          >
-            <X
-              className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`}
-              strokeWidth={2.5}
-            />
-          </button>
+        <div className={`flex-none backdrop-blur-xl border-b z-40 shadow-lg transition-colors ${isDarkMode ? 'bg-black/80 border-white/10 shadow-black/50' : 'bg-white/80 border-black/10 shadow-black/5'}`}>
+          <div className="px-4 pb-3 flex items-center justify-between" style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}>
+            <div className="flex items-center gap-2">
+              <button onClick={onClose} className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-[#1c1c1e]' : 'hover:bg-black/5'}`}>
+                <ArrowLeft className={`w-5 h-5 ${isDarkMode ? 'text-white' : 'text-black'}`} />
+              </button>
+              <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-black'}`}>Edit Expense</div>
+            </div>
+            <button
+              onClick={handleDelete}
+              className={`p-2 rounded-lg transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-500`}
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Expense Description */}
-          <div>
-            <label
-              className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
-            >
-              Description
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+          
+          {/* Amount Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4"
+          >
+            <div className="bg-gradient-to-br from-[#007aff] via-[#007aff] to-[#0051d5] rounded-3xl p-6 shadow-2xl shadow-[#007aff]/30 border border-[#007aff]/30">
+              <motion.div 
+                className="flex items-center justify-center gap-2 mb-2"
+              >
+                <span className="text-3xl text-white font-light">₹</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={handleAmountChange}
+                  placeholder="0"
+                  className="bg-transparent text-4xl font-bold text-white placeholder:text-white/40 focus:outline-none text-center w-full min-w-[50px]"
+                />
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Category */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-4"
+          >
+            <label className="text-xs text-black/45 mb-2 block font-medium">
+              CATEGORY
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {legacyCategories.map((cat) => {
+                const isSelected = category === cat.id;
+                
+                // Hide legacy categories if not selected to keep UI clean
+                if (!categories.find(c => c.id === cat.id) && !isSelected) {
+                  return null;
+                }
+
+                return (
+                  <motion.button
+                    key={cat.id}
+                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => setCategory(cat.id)}
+                    style={
+                      !isSelected 
+                        ? { 
+                            background: isDarkMode 
+                              ? `linear-gradient(135deg, ${cat.color}10, ${cat.color}05)`
+                              : `linear-gradient(135deg, ${cat.color}15, white)`,
+                            borderColor: `${cat.color}20`
+                          } 
+                        : {}
+                    }
+                    className={`relative p-3 rounded-xl transition-all ${
+                      isSelected
+                        ? 'bg-[#007aff] border-2 border-[#007aff] shadow-lg shadow-[#007aff]/30'
+                        : isDarkMode ? 'border-2' : 'border border-black/10 shadow-sm'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div
+                        className={`p-2 rounded-lg transition-colors ${
+                          isSelected ? 'bg-white/20' : isDarkMode ? 'bg-[#2c2c2e]' : 'bg-white shadow-sm'
+                        }`}
+                        style={!isSelected ? { color: cat.color } : {}}
+                      >
+                        <div className={isSelected ? 'text-white' : ''}>
+                          {cat.icon}
+                        </div>
+                      </div>
+                      <span
+                        className={`text-xs font-medium transition-colors ${
+                          isSelected ? 'text-white' : isDarkMode ? 'text-white/50' : 'text-gray-700'
+                        }`}
+                      >
+                        {cat.name}
+                      </span>
+                    </div>
+                    {isSelected && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm"
+                      >
+                        <Check className="w-3 h-3 text-[#007aff]" />
+                      </motion.div>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          {/* Description */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="mb-4"
+          >
+            <label className="text-xs text-black/45 mb-2 block font-medium">
+              DESCRIPTION <span className="text-white/50 font-normal">(Optional)</span>
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g., Lunch at cafe"
-              className={`w-full px-4 py-3.5 rounded-[12px] text-[17px] focus:outline-none focus:ring-2 ${
-                isDarkMode
-                  ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
-                  : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
+              placeholder="What did you buy?"
+              className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:border-[#007aff] transition-all ${
+                isDarkMode 
+                  ? 'bg-[#1c1c1e] border border-white/10 text-white placeholder:text-black/60' 
+                  : 'bg-white border border-black/10 text-black placeholder:text-white/50 shadow-sm focus:ring-4 focus:ring-[#007aff]/10'
               }`}
-              required
             />
-          </div>
+          </motion.div>
 
-          {/* Category */}
-          <div>
-            <label
-              className={`block text-[15px] font-semibold mb-3 ${isDarkMode ? "text-white" : "text-black"}`}
-            >
-              Category
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {categories.map((cat) => {
-                const isSelected = category === cat.value;
-                return (
-                  <button
-                    key={cat.value}
-                    type="button"
-                    onClick={() => setCategory(cat.value)}
-                    className={`p-4 rounded-[14px] transition-all duration-200 border-2 ${
-                      isSelected
-                        ? isDarkMode
-                          ? "border-[#0a84ff] bg-[#0a84ff]/10"
-                          : "border-[#007aff] bg-[#007aff]/5"
-                        : isDarkMode
-                          ? "border-transparent bg-[#2c2c2e] hover:bg-[#3c3c3e]"
-                          : "border-transparent bg-[#f5f5f7] hover:bg-[#e5e5e7]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full bg-gradient-to-br ${cat.color} flex items-center justify-center flex-shrink-0 shadow-sm text-[20px]`}
-                      >
-                        {cat.icon}
-                      </div>
-                      <span
-                        className={`text-[15px] font-semibold ${
-                          isSelected
-                            ? isDarkMode
-                              ? "text-[#0a84ff]"
-                              : "text-[#007aff]"
-                            : isDarkMode
-                              ? "text-white"
-                              : "text-black"
-                        }`}
-                      >
-                        {cat.label}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        </div>
 
-          {/* Amount */}
-          <div>
-            <label
-              className={`block text-[15px] font-semibold mb-2 ${isDarkMode ? "text-white" : "text-black"}`}
-            >
-              Amount
-            </label>
-            <div className="relative">
-              <span
-                className={`absolute left-4 top-1/2 -translate-y-1/2 text-[17px] font-semibold ${
-                  isDarkMode ? "text-white/50" : "text-black/50"
-                }`}
-              >
-                ₹
-              </span>
-              <input
-                type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className={`w-full pl-8 pr-4 py-3.5 rounded-[12px] text-[17px] focus:outline-none focus:ring-2 ${
-                  isDarkMode
-                    ? "bg-[#2c2c2e] text-white placeholder:text-white/30 focus:ring-[#0a84ff]"
-                    : "bg-[#f5f5f7] text-black placeholder:text-black/30 focus:ring-[#007aff]"
-                }`}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-2">
+        {/* Save Button */}
+        <div className={`flex-none w-full backdrop-blur-md border-t p-4 z-50 transition-colors ${
+          isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-black/10'
+        }`} style={{ 
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+          paddingTop: '16px'
+        }}>
+          <div className="w-full relative">
             <button
-              type="button"
-              onClick={handleDelete}
-              className={`flex-1 py-[15px] px-6 rounded-[14px] transition-all duration-150 font-semibold text-[17px] active:scale-[0.97] ${
-                isDarkMode
-                  ? "bg-red-500/20 hover:bg-red-500/30 text-red-400"
-                  : "bg-red-50 hover:bg-red-100 text-red-600"
-              }`}
-            >
-              Delete
-            </button>
-            <button
-              type="submit"
-              className={`flex-1 py-[15px] px-6 rounded-[14px] transition-all duration-150 font-semibold text-[17px] active:scale-[0.97] ${
-                isDarkMode
-                  ? "bg-white hover:bg-white/90 text-black"
-                  : "bg-black hover:bg-black/90 text-white"
+              onClick={handleSubmit}
+              disabled={!isFormValid}
+              className={`w-full py-4 rounded-2xl font-semibold text-base shadow-lg transition-all active:scale-[0.98] ${
+                isFormValid
+                  ? 'bg-[#007aff] hover:bg-[#0051D5] text-white shadow-[#007aff]/30'
+                  : isDarkMode
+                    ? 'bg-[#1c1c1e] text-white/30 cursor-not-allowed border border-white/5'
+                    : 'bg-black/5 text-black/40 cursor-not-allowed border border-black/10 shadow-sm'
               }`}
             >
               Save Changes
             </button>
           </div>
-        </form>
-      </motion.div>
+        </div>
+      </div>
     </div>,
-    document.body,
+    document.body
   );
 }

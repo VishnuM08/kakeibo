@@ -67,8 +67,14 @@ export function AnalyticsView({ expenses, onClose, isDarkMode }: AnalyticsViewPr
   });
 
   return (
-    <div className={`fixed inset-0 z-50 overflow-y-auto ${isDarkMode ? 'bg-[#121212]' : 'bg-[#f5f5f7]'}`}>
-      <div className="max-w-lg mx-auto px-5 py-6">
+    <div 
+      className={`fixed inset-0 z-[100] overflow-y-auto ${isDarkMode ? 'bg-[#121212]' : 'bg-[#f5f5f7]'}`}
+      style={{ 
+        paddingTop: 'min(env(safe-area-inset-top, 24px), 40px)', 
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 90px)' 
+      }}
+    >
+      <div className="max-w-lg mx-auto px-5">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <button

@@ -115,14 +115,19 @@ export default function App() {
           key: "kakeibo_theme_mode",
         });
         if (storedTheme) {
-          setThemeMode(storedTheme as any);
+          // Force existing 'dark' users to 'oled' for the unified true black theme
+          if (storedTheme === "dark") {
+             setThemeMode("oled");
+          } else {
+             setThemeMode(storedTheme as any);
+          }
         } else {
           // Compatibility migration: check old dark mode key
           const { value: oldDarkMode } = await Preferences.get({
             key: "kakeibo_dark_mode",
           });
           if (oldDarkMode === "true") {
-            setThemeMode("dark");
+            setThemeMode("oled");
           } else {
             setThemeMode("light");
           }
@@ -308,8 +313,8 @@ export default function App() {
 
   const toggleDarkMode = async () => {
     let nextMode: "light" | "dark" | "oled" = "light";
-    if (themeMode === "light") nextMode = "dark";
-    else if (themeMode === "dark") nextMode = "oled";
+    // Toggle directly to OLED (true black)
+    if (themeMode === "light") nextMode = "oled";
     else nextMode = "light";
 
     setThemeMode(nextMode);

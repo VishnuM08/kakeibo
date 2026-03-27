@@ -105,6 +105,9 @@ interface AddExpenseModalProps {
   }) => void;
   isDarkMode?: boolean;
   initialDate?: Date;
+  initialAmount?: string;
+  initialDescription?: string;
+  initialCategory?: string;
 }
 
 export function AddExpenseModal({
@@ -113,10 +116,13 @@ export function AddExpenseModal({
   onAdd,
   isDarkMode = false,
   initialDate,
+  initialAmount = '',
+  initialDescription = '',
+  initialCategory = '',
 }: AddExpenseModalProps) {
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [amount, setAmount] = useState(initialAmount);
+  const [description, setDescription] = useState(initialDescription);
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [date, setDate] = useState<Date>(initialDate || new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [batchMode, setBatchMode] = useState(false);
@@ -127,6 +133,15 @@ export function AddExpenseModal({
   const [recentCategories, setRecentCategories] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
+
+  // Sync state with props when modal opens or props change
+  useEffect(() => {
+    if (isOpen) {
+      if (initialAmount) setAmount(initialAmount);
+      if (initialDescription) setDescription(initialDescription);
+      if (initialCategory) setSelectedCategory(initialCategory);
+    }
+  }, [isOpen, initialAmount, initialDescription, initialCategory]);
 
   // Load data from localStorage
   useEffect(() => {
@@ -331,14 +346,21 @@ export function AddExpenseModal({
     }
   };
 
+  if (!isOpen) return null;
+
   return createPortal(
-    <div className={`fixed inset-0 z-[100] h-[100dvh] w-screen flex flex-col items-center ${isDarkMode ? 'bg-black' : 'bg-[#f5f5f7]'} transition-colors duration-300`}>
+    <motion.div 
+      initial={{ opacity: 0, y: 100 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 100 }}
+      className={`fixed inset-0 z-[100000] h-[100dvh] w-screen flex flex-col items-center ${isDarkMode ? 'bg-black' : 'bg-[#f5f5f7]'} transition-colors duration-300`}
+    >
       <Toaster position="top-center" isDarkMode={isDarkMode} />
       
       <div className="w-full max-w-md h-full flex flex-col relative overflow-hidden">
         {/* Header */}
         <div className={`flex-none backdrop-blur-xl border-b z-40 shadow-lg transition-colors ${isDarkMode ? 'bg-black/80 border-white/10 shadow-black/50' : 'bg-white/80 border-black/10 shadow-black/5'}`}>
-          <div className="px-4 pb-3 flex items-center justify-between" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
+          <div className="px-4 pb-3 flex items-center justify-between" style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}>
           <div className="flex items-center gap-2">
             <button onClick={onClose} className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-[#1c1c1e]' : 'hover:bg-black/5'}`}>
               <ArrowLeft className={`w-5 h-5 ${isDarkMode ? 'text-white' : 'text-black'}`} />
@@ -835,7 +857,10 @@ export function AddExpenseModal({
         isDarkMode 
           ? 'bg-black/95 border-white/10' 
           : 'bg-white/95 border-black/10'
-      }`}>
+      }`} style={{ 
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+        paddingTop: '16px'
+      }}>
         <div className="w-full relative">
           <motion.button
             drag="y"
@@ -875,7 +900,7 @@ export function AddExpenseModal({
         </div>
       </div>
       </div>
-    </div>,
+    </motion.div>,
     document.body
   );
 }

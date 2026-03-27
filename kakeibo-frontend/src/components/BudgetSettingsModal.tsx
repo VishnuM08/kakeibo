@@ -57,8 +57,8 @@ export function BudgetSettingsModal({
     <div
       className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 pt-6 sm:items-center sm:pt-0"
       style={{
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
       }}
       onClick={handleOverlayClick}
     >

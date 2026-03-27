@@ -11,9 +11,12 @@ import {
   Zap,
   MoreHorizontal,
   Plus,
+  Smartphone,
 } from "lucide-react";
 import { formatTime } from "../utils/dateUtils";
 import { UIExpense } from "../types/UIExpense";
+import { parseTransactionSMS, ParsedTransaction } from "../utils/smsParser";
+import { DetectedTransactions } from "./DetectedTransactions";
 
 // interface Expense {
 //   id: string;
@@ -30,6 +33,7 @@ interface DailyExpensePopupProps {
   date: Date | null;
   expenses: UIExpense[];
   isDarkMode?: boolean;
+  onApproveSMS: (tx: ParsedTransaction) => void;
 }
 
 const getCategoryIcon = (category: string) => {
@@ -65,7 +69,30 @@ export function DailyExpensePopup({
   date,
   expenses,
   isDarkMode,
+  onApproveSMS,
 }: DailyExpensePopupProps) {
+  const [detectedTransactions, setDetectedTransactions] = useState<ParsedTransaction[]>([]);
+
+  // Simulation: Add a mock transaction for testing
+  const simulateSMS = () => {
+    const mockSMS = "Rs. 1500.00 spent at Amazon on 2024-03-25";
+    const parsed = parseTransactionSMS(mockSMS);
+    if (parsed) {
+      setDetectedTransactions(prev => [...prev, parsed]);
+    }
+  };
+
+  const handleApproveTransaction = (tx: ParsedTransaction) => {
+    // Call parent handler to handle pre-filling and navigation
+    onApproveSMS(tx);
+    // Remove it from locally detected list
+    setDetectedTransactions(prev => prev.filter(t => t !== tx));
+  };
+
+  const handleDiscardTransaction = (index: number) => {
+    setDetectedTransactions(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Scroll Look
   useEffect(() => {
     if (isOpen) {
@@ -101,8 +128,8 @@ export function DailyExpensePopup({
     <div
       className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 pt-6 sm:items-center sm:pt-0 animate-fade-overlay"
       style={{
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
       }}
       onClick={handleOverlayClick}
     >
@@ -181,6 +208,29 @@ export function DailyExpensePopup({
               </span>
             </button>
           </div>
+        </div>
+
+        {/* Detected Transactions Section */}
+        <div className="px-6">
+          <DetectedTransactions 
+            transactions={detectedTransactions}
+            onApprove={handleApproveTransaction}
+            onDiscard={handleDiscardTransaction}
+            isDarkMode={isDarkMode}
+          />
+          
+          {/* Debug/Test Button */}
+          {detectedTransactions.length === 0 && (
+            <button 
+              onClick={simulateSMS}
+              className={`mt-4 w-full py-3 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 text-[12px] font-bold ${
+                isDarkMode ? "border-white/10 text-white/40 hover:bg-white/5" : "border-black/5 text-black/40 hover:bg-black/5"
+              }`}
+            >
+              <Smartphone className="w-4 h-4" />
+              Simulate Transaction SMS
+            </button>
+          )}
         </div>
 
         {/* Expenses List */}

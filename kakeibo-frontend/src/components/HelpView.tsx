@@ -327,8 +327,11 @@ export function HelpView({ onClose, isDarkMode }: HelpViewProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.6)" }}
+      className="fixed inset-0 z-[100000] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ 
+        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)'
+      }}
       onClick={onClose}
     >
       <motion.div

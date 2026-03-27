@@ -3,11 +3,13 @@ import Joyride, { CallBackProps, EVENTS, STATUS, Step } from "react-joyride";
 import { motion } from "framer-motion";
 
 interface WalkthroughTourProps {
+  activeTab?: string;
   isDarkMode?: boolean;
   onTourStateChange?: (isActive: boolean) => void;
 }
 
 export function WalkthroughTour({
+  activeTab = "home",
   isDarkMode = false,
   onTourStateChange,
 }: WalkthroughTourProps) {
@@ -242,7 +244,7 @@ export function WalkthroughTour({
 
     window.addEventListener("startWalkthroughTour", handleStartTourEvent);
 
-    if (!hasCompletedTour) {
+    if (!hasCompletedTour && activeTab === "home") {
       // Small delay to ensure the DOM is fully painted
       const timer = setTimeout(() => {
         setRun(true);
@@ -283,10 +285,15 @@ export function WalkthroughTour({
       );
     }
 
-    // If the tour is finished or skipped, mark it as completed
+    // Mark it as completed if finished or skipped
     if (finishedStatuses.includes(status)) {
       setRun(false);
       localStorage.setItem("kakeiboTourCompleted", "true");
+    }
+
+    // Also stop running if we leave the home tab
+    if (activeTab !== "home" && run) {
+      setRun(false);
     }
   };
 

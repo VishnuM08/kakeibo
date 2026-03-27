@@ -125,8 +125,8 @@ export function ExportModal({
             className="fixed inset-0 z-50 flex items-start justify-center pt-10 safe-top sm:items-center sm:pt-0 p-4 sm:p-0"
             style={{
               background: "rgba(0,0,0,0.5)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
             }}
             onClick={onClose}
           >
