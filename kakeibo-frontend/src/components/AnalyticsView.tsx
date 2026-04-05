@@ -68,10 +68,10 @@ export function AnalyticsView({ expenses, onClose, isDarkMode }: AnalyticsViewPr
 
   return (
     <div 
-      className={`fixed inset-0 z-[100] overflow-y-auto ${isDarkMode ? 'bg-[#121212]' : 'bg-[#f5f5f7]'}`}
+      className={`w-full h-full overflow-y-auto ${isDarkMode ? 'bg-[#121212]' : 'bg-[#f5f5f7]'}`}
       style={{ 
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)', 
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 90px)' 
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 120px)' 
       }}
     >
       <div className="max-w-lg mx-auto px-5">

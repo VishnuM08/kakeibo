@@ -31,6 +31,13 @@ export interface ParsedTransaction {
 export const parseTransactionSMS = (message: string): ParsedTransaction | null => {
   if (!message || message.length < 10) return null;
 
+  // Stricter check: Must look like a bank or payment transaction
+  const bankIndicators = /\b(HDFC|SBI|ICICI|AXIS|BOB|PNB|UNION|CANARA|KOTAK|YES|IDBI|Bank|Acct|A\/c|VPA|UPI|GPay|PhonePe|Paytm|AmazonPay)\b/i;
+  // Also check for amount patterns to avoid non-transactional SMS
+  const hasAmount = /(?:Rs\.?|INR|₹|Amt|Amount)\s*[\d,]+(?:\.\d{1,2})?/i.test(message);
+  
+  if (!bankIndicators.test(message) || !hasAmount) return null;
+
   // 1. AMOUNT EXTRACTION
   // Matches: Rs. 500, Rs 500, INR 500, ₹ 500, 500.00, etc.
   const amountRegex = /(?:Rs\.?|INR|₹|Amt|Amount)\s*([\d,]+(?:\.\d{1,2})?)/i;
@@ -40,10 +47,12 @@ export const parseTransactionSMS = (message: string): ParsedTransaction | null =
 
   // 2. TRANSACTION TYPE (Debit vs Credit)
   let type: 'debit' | 'credit' = 'debit'; // Default to debit (safer for expense tracker)
-  if (/\b(credited|received|deposited|added|inbound|refunded|reversal|linked)\b/i.test(message)) {
-    type = 'credit';
-  } else if (/\b(debited|deducted|spent|withdrawn|paid|outbound|txn|tran|purchase)\b/i.test(message)) {
+  
+  // Prioritize "debited" keywords over "credited" for the account holder's perspective
+  if (/\b(debited|deducted|spent|withdrawn|paid|outbound|txn|tran|purchase)\b/i.test(message)) {
     type = 'debit';
+  } else if (/\b(credited|received|deposited|added|inbound|refunded|reversal|linked)\b/i.test(message)) {
+    type = 'credit';
   }
 
   // 3. MERCHANT EXTRACTION
@@ -52,6 +61,8 @@ export const parseTransactionSMS = (message: string): ParsedTransaction | null =
   
   // Specific patterns for common bank formats
   const merchantPatterns = [
+    // ICICI/HDFC Special: "debited for Rs ... on ...; [MERCHANT] credited/at"
+    /debited for Rs.*?on.*?;[\s]*([A-Z0-9\s&*'.@]+?)(?:credited|using|at|on|via|avl|bal|Ref|\.?$)/i,
     /(?:at|to|on|from|via|info:)\s*([A-Z0-9\s&*'.@]+?)(?:\s+on|\s+at|\s+using|\s+via|\s+avl|\s+bal|\s+Ref|\.?$)/i,
     /VPA\s+([A-Z0-9\s&*'.@]+?)(?:\s+on|\s+at|\s*)/i, // UPI format
     /info:\s*([A-Z0-9\s&*'.]+?)(?:\s*on|\.?$)/i, // SBI format often uses info:
@@ -61,19 +72,26 @@ export const parseTransactionSMS = (message: string): ParsedTransaction | null =
     const match = message.match(pattern);
     if (match && match[1]) {
       const candidate = match[1].trim();
-      if (candidate && !/^(Rs|INR|Amt|Account|A\/c|is|our)/i.test(candidate)) {
-        merchant = candidate;
+      // Filter out common false positives for merchant name
+      if (candidate && !/^(Rs|INR|Amt|Amount|Account|A\/c|is|our|avl|bal|your|the|this)/i.test(candidate) && candidate.length > 2) {
+        // Further clean up the merchant name
+        merchant = candidate.replace(/\s+/g, ' ');
         break;
       }
     }
   }
 
-  // 4. BANK DETECTION (Optional but nice)
+  // 4. BANK DETECTION
   let bank = "Bank Transaction";
-  if (/\b(HDFC|SBI|ICICI|AXIS|BOB|PNB|UNION|CANARA|KOTAK|YES|IDBI)\b/i.test(message)) {
-    const bankMatch = message.match(/\b(HDFC|SBI|ICICI|AXIS|BOB|PNB|UNION|CANARA|KOTAK|YES|IDBI)\b/i);
-    if (bankMatch) bank = bankMatch[0].toUpperCase();
-  } else if (/\b(UPI|PAYTM|GPAY|PHONEPE)\b/i.test(message)) {
+  const knownBanks = ["HDFC", "SBI", "ICICI", "AXIS", "BOB", "PNB", "UNION", "CANARA", "KOTAK", "YES", "IDBI"];
+  for (const b of knownBanks) {
+    if (new RegExp(`\\b${b}\\b`, "i").test(message)) {
+      bank = b.toUpperCase();
+      break;
+    }
+  }
+  
+  if (bank === "Bank Transaction" && /\b(UPI|PAYTM|GPAY|PHONEPE)\b/i.test(message)) {
     bank = "UPI / App";
   }
 
@@ -84,7 +102,7 @@ export const parseTransactionSMS = (message: string): ParsedTransaction | null =
     amount,
     merchant,
     date: new Date(),
-    category: "other", // Default category
+    category: categorizeTransaction(merchant),
     rawHash: hash,
     transactionType: type,
     type: type, // Support both naming conventions

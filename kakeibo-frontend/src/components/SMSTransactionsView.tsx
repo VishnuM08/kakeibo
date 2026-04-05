@@ -13,9 +13,8 @@ import {
 } from 'lucide-react';
 import { ParsedTransaction } from '../utils/smsParser';
 import { message as antMessage } from 'antd';
-import { registerPlugin, Capacitor } from '@capacitor/core';
-
-const KakeiboNative = registerPlugin<any>('KakeiboNative');
+import { Capacitor } from '@capacitor/core';
+import { KakeiboNative } from '../plugins/KakeiboNative';
 
 /**
  * SMS Transactions View Component
@@ -161,9 +160,9 @@ export function SMSTransactionsView({
   return (
     <>
       <div
-        className={`min-h-screen ${
+        className={`w-full h-full overflow-y-auto ${
           isDarkMode ? 'bg-black' : 'bg-[#f5f5f7]'
-        } pb-24`}
+        } pb-32`}
       >
         {/* Header */}
         <div

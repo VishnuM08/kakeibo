@@ -197,18 +197,14 @@ export function RecurringExpensesView({
 
   return (
     <div 
-      className={`w-full h-full flex flex-col pt-2 ${
+      className={`w-full h-full flex flex-col max-w-lg mx-auto min-h-0 ${
         isDarkMode ? "bg-[#1c1c1e]" : "bg-white"
       }`}
       style={{
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 110px)',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
-      <div 
-        className="w-full max-w-lg mx-auto flex-1 flex flex-col min-h-0"
-      >
-        <div className={`sticky top-0 z-10 shrink-0 border-b ${isDarkMode ? "bg-[#1c1c1e] border-white/10" : "bg-white border-black/12 shadow-sm"}`}>
+      <div className={`sticky top-0 z-10 shrink-0 border-b ${isDarkMode ? "bg-[#1c1c1e] border-white/10" : "bg-white border-black/12 shadow-sm"}`}>
           <div className="flex items-center justify-between p-5">
             <div>
               <h2 className={`text-[28px] font-bold ${isDarkMode ? "text-white" : "text-black"}`}>Recurring Expenses</h2>
@@ -232,20 +228,22 @@ export function RecurringExpensesView({
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0">
-          <div className="p-5 pb-16 space-y-6">
-            <button
-              id="add-recurring-btn"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent('openRecurringModal'));
-              }}
-              className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-semibold text-[17px] shadow-lg transition-all active:scale-[0.98] cursor-pointer hover:brightness-110 z-[1000] relative ${isDarkMode ? "bg-[#0a84ff] text-white" : "bg-[#007aff] text-white"}`}
-              style={{ touchAction: "manipulation" }}
-            >
-              <Plus className="w-5 h-5 text-white" strokeWidth={2.5} />
-              <span>Add Recurring Expense</span>
-            </button>
+          <div className="p-5 pb-44 space-y-6">
+            <div className="px-5">
+              <button
+                id="add-recurring-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.dispatchEvent(new CustomEvent('openRecurringModal'));
+                }}
+                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-semibold text-[17px] shadow-lg transition-all active:scale-[0.98] cursor-pointer hover:brightness-110 z-[1000] relative ${isDarkMode ? "bg-[#0a84ff] text-white" : "bg-[#007aff] text-white"}`}
+                style={{ touchAction: "manipulation" }}
+              >
+                <Plus className="w-5 h-5 text-white" strokeWidth={2.5} />
+                <span>Add Recurring Expense</span>
+              </button>
+            </div>
 
             {activeExpenses.length > 0 && (
               <div>
@@ -299,7 +297,6 @@ export function RecurringExpensesView({
                 <p className={`text-[17px] opacity-40`}>No recurring expenses yet</p>
               </div>
             )}
-          </div>
         </div>
       </div>
     </div>
@@ -329,34 +326,36 @@ const RecurringExpenseItem = forwardRef<HTMLDivElement, RecurringExpenseItemProp
         exit={{ opacity: 0, scale: 0.95 }}
         className={`p-4 rounded-2xl border transition-all ${isDarkMode ? "bg-white/5 border-white/10" : "bg-white border-black/5 shadow-sm"} ${isDue && expense.isActive ? (isDarkMode ? "border-orange-500/50 bg-orange-500/5" : "border-orange-200 bg-orange-50") : ""}`}
       >
-        <div className="flex items-start gap-4">
-          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 shadow-sm ${!expense.isActive ? "grayscale opacity-50" : ""}`}>
-            <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 shadow-sm ${!expense.isActive ? "grayscale opacity-50" : ""}`}>
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <h4 className={`text-[17px] font-semibold ${isDarkMode ? "text-white" : "text-black"} ${!expense.isActive ? "opacity-50" : ""}`}>{expense.description}</h4>
-              <p className={`text-[17px] font-bold tabular-nums flex-shrink-0 ${isDarkMode ? "text-white" : "text-black"} ${!expense.isActive ? "opacity-50" : ""}`}>₹{expense.amount.toFixed(2)}</p>
+            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+              <h4 className={`text-[16px] sm:text-[17px] font-semibold truncate ${isDarkMode ? "text-white" : "text-black"} ${!expense.isActive ? "opacity-50" : ""}`}>{expense.description}</h4>
+              <p className={`text-[16px] sm:text-[17px] font-bold tabular-nums flex-shrink-0 ${isDarkMode ? "text-white" : "text-black"} ${!expense.isActive ? "opacity-50" : ""}`}>₹{expense.amount.toFixed(2)}</p>
             </div>
-            <div className="flex items-center gap-2 mb-3">
-              <p className={`text-[15px] capitalize ${isDue && expense.isActive ? (isDarkMode ? "text-orange-400" : "text-orange-600") : (isDarkMode ? "text-white/50" : "text-black/50")}`}>{expense.frequency}</p>
-              <span className={`text-[13px] ${isDarkMode ? "text-white/30" : "text-black/30"}`}>•</span>
-              <p className={`text-[15px] ${isDue && expense.isActive ? (isDarkMode ? "text-orange-400" : "text-orange-600") : (isDarkMode ? "text-white/50" : "text-black/50")}`}>In {daysUntil} days</p>
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+              <p className={`text-[14px] sm:text-[15px] capitalize ${isDue && expense.isActive ? (isDarkMode ? "text-orange-400" : "text-orange-600") : (isDarkMode ? "text-white/50" : "text-black/50")}`}>{expense.frequency}</p>
+              <span className={`text-[12px] opacity-30 ${isDarkMode ? "text-white" : "text-black"}`}>•</span>
+              <p className={`text-[14px] sm:text-[15px] ${isDue && expense.isActive ? (isDarkMode ? "text-orange-400" : "text-orange-600") : (isDarkMode ? "text-white/50" : "text-black/50")}`}>In {daysUntil} days</p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               {expense.isActive && isDue && (
-                <button onClick={() => onProcessNow(expense)} className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${isDarkMode ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}>Process Now</button>
+                <button onClick={() => onProcessNow(expense)} className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors whitespace-nowrap ${isDarkMode ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}>Process Now</button>
               )}
-              <button onClick={() => onToggleActive(expense.id)} className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors flex items-center gap-1 ${expense.isActive ? (isDarkMode ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30" : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200") : (isDarkMode ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : "bg-green-100 text-green-700 hover:bg-green-200")}`}>
-                {expense.isActive ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                {expense.isActive ? "Pause" : "Resume"}
-              </button>
-              <button onClick={() => window.dispatchEvent(new CustomEvent('openRecurringModal', { detail: { expense } }))} className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10"}`}>
-                <Edit2 className={`w-4 h-4 ${isDarkMode ? "text-white/50" : "text-black/50"}`} />
-              </button>
-              <button onClick={() => onDelete(expense.id)} className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10"}`}>
-                <Trash2 className={`w-4 h-4 ${isDarkMode ? "text-red-400" : "text-red-600"}`} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => onToggleActive(expense.id)} className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${expense.isActive ? (isDarkMode ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30" : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200") : (isDarkMode ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : "bg-green-100 text-green-700 hover:bg-green-200")}`}>
+                  {expense.isActive ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                  {expense.isActive ? "Pause" : "Resume"}
+                </button>
+                <button onClick={() => window.dispatchEvent(new CustomEvent('openRecurringModal', { detail: { expense } }))} className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10"}`}>
+                  <Edit2 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDarkMode ? "text-white/50" : "text-black/50"}`} />
+                </button>
+                <button onClick={() => onDelete(expense.id)} className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10"}`}>
+                  <Trash2 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDarkMode ? "text-red-400" : "text-red-600"}`} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

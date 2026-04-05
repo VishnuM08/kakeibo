@@ -11,7 +11,7 @@ import { getMe, getAuthToken, removeAuthToken } from "./services/api";
 import { clearAllLocalData } from "./utils/syncUtils";
 import { Preferences } from "@capacitor/preferences";
 import { App as CapacitorApp } from "@capacitor/app";
-import { registerPlugin, Capacitor } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
 import {
   Routes,
   Route,
@@ -22,8 +22,8 @@ import {
 import { HelpCircle, Smartphone } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { message } from "antd";
-
-const KakeiboNative = registerPlugin<any>('KakeiboNative');
+import { KakeiboNative } from "./plugins/KakeiboNative";
+import OAuthSuccess from "./components/OAuthSuccess";
 
 /**
  * App Wrapper Component
@@ -41,7 +41,6 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [displayScale, setDisplayScale] = useState(1.0);
 
-
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -55,6 +54,21 @@ export default function App() {
         // Example: com.aignite.kakeibo://reset-password?token=XYZ
         try {
           const url = new URL(data.url);
+
+          if (url.pathname === "/auth/success") {
+            const token = url.searchParams.get("token");
+
+            if (token) {
+              console.log("✅ Token received:", token);
+
+              // Save token
+              localStorage.setItem("token", token);
+
+              // Navigate to home
+              navigate("/");
+              return;
+            }
+          }
           const path = url.pathname || "/";
           const search = url.search || "";
           navigate(`${path}${search}`);
@@ -123,9 +137,9 @@ export default function App() {
         if (storedTheme) {
           // Force existing 'dark' users to 'oled' for the unified true black theme
           if (storedTheme === "dark") {
-             setThemeMode("oled");
+            setThemeMode("oled");
           } else {
-             setThemeMode(storedTheme as any);
+            setThemeMode(storedTheme as any);
           }
         } else {
           // Compatibility migration: check old dark mode key
@@ -414,6 +428,7 @@ export default function App() {
             />
             <Route path="/reset-password" element={resetPasswordElement} />
             <Route path="/verify-email" element={verifyEmailElement} />
+            <Route path="/oauth-success" element={<OAuthSuccess />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </>
         ) : (
@@ -456,7 +471,6 @@ export default function App() {
           </>
         )}
       </Routes>
-
     </>
   );
 }

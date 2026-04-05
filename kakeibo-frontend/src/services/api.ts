@@ -1,14 +1,11 @@
-/**
- * API Service Layer for Spring Boot Backend Integration
- *
- * BACKEND INTEGRATION NOTES:
- * - Base URL should be configured via environment variable (e.g., VITE_API_BASE_URL)
- * - All requests should include JWT token in Authorization header
- * - Error handling should be centralized here
- * - Response types should match backend DTOs
- */
-
-// ==================== TYPE DEFINITIONS ====================
+import axios from "axios";
+import { BackendExpense } from "../types/BackendExpense";
+export type Expense = BackendExpense;
+export type { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
+import { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
+import { Preferences } from "@capacitor/preferences";
+import { Capacitor } from "@capacitor/core";
+import { ENV } from "../config/env";
 
 export interface User {
   id: string;
@@ -71,17 +68,6 @@ export interface RegisterRequest {
 
 // ==================== API CONFIGURATION ====================
 
-// TODO: Move to environment variable
-// For Vite projects, use import.meta.env instead of process.env
-//const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:8080/api';
-
-/**
- * Get JWT token from localStorage
- * BACKEND INTEGRATION: Token will be stored after successful login
- */
-/**
- * Get JWT token from Storage
- */
 export const getAuthToken = async (): Promise<string | null> => {
   const { value } = await Preferences.get({ key: "auth_token" });
   return value;
@@ -90,6 +76,7 @@ export const getAuthToken = async (): Promise<string | null> => {
 /**
  * Set JWT token in Storage
  */
+
 export const setAuthToken = async (token: string): Promise<void> => {
   await Preferences.set({ key: "auth_token", value: token });
 };
@@ -97,43 +84,16 @@ export const setAuthToken = async (token: string): Promise<void> => {
 /**
  * Remove JWT token from Storage (logout)
  */
+
 export const removeAuthToken = async (): Promise<void> => {
   await Preferences.remove({ key: "auth_token" });
 };
-
-// Interceptor is already correct, but let's make sure it matches
-
-/**
- * Generic API request handler with error handling
- * BACKEND INTEGRATION: Handles JWT expiration and refresh token logic
- */
-// async function apiRequest<T>(
-//   endpoint: string,
-//   options: RequestInit = {}
-// ): Promise<T> {
-//   try {
-//     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-//       ...options,
-//       headers: {
-//         ...getAuthHeaders(),
-//         ...options.headers,
-//       },
-//     });
-
-import axios from "axios";
-import { BackendExpense } from "../types/BackendExpense";
-export type Expense = BackendExpense;
-export type { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
-import { SavingsGoal, BackendSavingsGoal } from "../types/SavingsGoal";
-import { Preferences } from "@capacitor/preferences";
-import { Capacitor } from "@capacitor/core";
-import { ENV } from "../config/env";
 
 // When running in a browser (web) during development, use the /api proxy to avoid CORS issues.
 // When running in production (web or native), use the explicit production URL.
 const isNative = Capacitor.isNativePlatform();
 const apiBaseUrl = ENV.API_BASE_URL || "https://api.kakeibo.theaignite.app";
-const baseURL = isNative || ENV.IS_PROD ? apiBaseUrl : "/api";
+export const baseURL = isNative || ENV.IS_PROD ? apiBaseUrl : "/api";
 
 const api = axios.create({
   baseURL: baseURL,

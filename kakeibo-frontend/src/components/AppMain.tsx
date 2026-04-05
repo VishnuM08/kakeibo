@@ -79,10 +79,9 @@ import {
 import { ParsedTransaction, parseTransactionSMS } from "../utils/smsParser";
 import { AddRecurringExpenseModal } from "./AddRecurringExpenseModal";
 import { BudgetOverviewDetails } from "./BudgetOverviewDetails";
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
-
-const KakeiboNative = registerPlugin<any>('KakeiboNative');
+import { KakeiboNative } from "../plugins/KakeiboNative";
 
 /**
  * Main App Component
@@ -279,6 +278,7 @@ export function AppMain({
           setSmsTransactions(prev => {
             if (prev.some(t => t.rawHash === parsed.rawHash)) return prev;
             message.success(`Transaction detected: ₹${parsed.amount}`);
+            setActiveTab('sms');
             return [parsed, ...prev];
           });
         }
@@ -707,19 +707,22 @@ export function AppMain({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 min-h-screen z-[100] overflow-y-auto"
+            className="fixed inset-0 z-[100] flex flex-col min-h-0"
             style={{
-              backgroundColor: isDarkMode ? "#000000" : "#f5f5f7",
-              paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 110px)",
+              backgroundColor: isDarkMode ? (themeMode === 'oled' ? "#000000" : "#1c1c1e") : "#f5f5f7",
             }}
           >
-            <SMSTransactionsView
-              transactions={smsTransactions}
-              onApprove={handleApproveSMS}
-              onReject={handleRejectSMS}
-              isDarkMode={isDarkMode}
-              onBack={() => setActiveTab("home")}
-            />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <SMSTransactionsView
+                transactions={smsTransactions}
+                onApprove={handleApproveSMS}
+                onReject={handleRejectSMS}
+                isDarkMode={isDarkMode}
+                onBack={() => setActiveTab("home")}
+              />
+            </div>
+            {/* Nav Bar Spacer */}
+            <div style={{ height: 'calc(env(safe-area-inset-bottom, 20px) + 80px)' }} />
           </motion.div>
         ) : activeTab === "stats" && !isAnyOverlayOpen ? (
           <motion.div
@@ -727,17 +730,20 @@ export function AppMain({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 min-h-screen z-[100] overflow-y-auto"
+            className="fixed inset-0 z-[100] flex flex-col min-h-0"
             style={{
-              backgroundColor: isDarkMode ? "#000000" : "#f5f5f7",
-              paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 110px)",
+              backgroundColor: isDarkMode ? (themeMode === 'oled' ? "#000000" : "#1c1c1e") : "#f5f5f7",
             }}
           >
-            <AnalyticsView
-              expenses={expenses}
-              onClose={() => setActiveTab("home")}
-              isDarkMode={isDarkMode}
-            />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <AnalyticsView
+                expenses={expenses}
+                onClose={() => setActiveTab("home")}
+                isDarkMode={isDarkMode}
+              />
+            </div>
+            {/* Nav Bar Spacer */}
+            <div style={{ height: 'calc(env(safe-area-inset-bottom, 20px) + 80px)' }} />
           </motion.div>
         ) : (activeTab === "bills") && !isAnyOverlayOpen ? (
           <motion.div
@@ -745,17 +751,20 @@ export function AppMain({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 min-h-screen z-[100] overflow-y-auto"
+            className="fixed inset-0 z-[100] flex flex-col min-h-0"
             style={{
-              backgroundColor: isDarkMode ? "#000000" : "#f5f5f7",
-              paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 110px)",
+              backgroundColor: isDarkMode ? (themeMode === 'oled' ? "#000000" : "#1c1c1e") : "#f5f5f7",
             }}
           >
-            <RecurringExpensesView
-              onClose={() => setActiveTab("home")}
-              isDarkMode={isDarkMode}
-              onAddExpense={handleAddExpense}
-            />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <RecurringExpensesView
+                onClose={() => setActiveTab("home")}
+                isDarkMode={isDarkMode}
+                onAddExpense={handleAddExpense}
+              />
+            </div>
+            {/* Nav Bar Spacer */}
+            <div style={{ height: 'calc(env(safe-area-inset-bottom, 20px) + 80px)' }} />
           </motion.div>
         ) : null}
       </AnimatePresence>
