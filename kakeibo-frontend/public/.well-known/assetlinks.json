@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.aignite.kakeibo",
       "sha256_cert_fingerprints": [
-        "4C:FD:46:92:72:FC:26:40:A1:F5:10:B6:2E:F3:97:A1:61:A9:5B:DB:56:B1:31:72:32:ED:FD:92:39:ED:11:F6"
+        "4C:FD:46:92:72:FC:26:40:A1:F5:10:B6:2E:F3:97:A1:61:A9:5B:DB:56:B1:31:72:32:ED:FD:92:39:ED:11:F6",
+        "4A:99:9A:23:1D:28:C2:20:7B:71:B0:97:BD:14:7F:B3:16:92:AE:A4:B7:4B:77:23:63:5B:C0:E8:CC:17:9D:09"
       ]
     }
   }
