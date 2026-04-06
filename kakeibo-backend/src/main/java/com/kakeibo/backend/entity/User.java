@@ -28,8 +28,17 @@ public class User implements Serializable {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT")
+    private String picture;
+
+    @Column(nullable = true)
     private String passwordHash;
+
+    @Column(nullable = false)
+    private String provider = "LOCAL";
+
+    @Column(nullable = true)
+    private String providerId;
 
     @Column(nullable = false)
     private boolean emailVerified = false;

@@ -96,7 +96,8 @@ public class AuthController {
         return new UserProfileResponse(
                 user.getId().toString(),
                 user.getEmail(),
-                user.getName()
+                user.getName(),
+                user.getPicture()
         );
     }
 }
