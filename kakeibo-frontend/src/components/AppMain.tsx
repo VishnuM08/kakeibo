@@ -101,6 +101,7 @@ const getCategoryColor = (category: string) => {
 };
 
 interface AppMainProps {
+  user: any;
   isDarkMode: boolean;
   themeMode: "light" | "dark" | "oled";
   onToggleDarkMode: () => void;
@@ -108,6 +109,7 @@ interface AppMainProps {
 }
 
 export function AppMain({
+  user,
   isDarkMode,
   themeMode,
   onToggleDarkMode,
@@ -138,7 +140,20 @@ export function AppMain({
   );
 
   // Track if walkthrough is running to force-render empty states
-  const [isTourActive, setIsTourActive] = useState(false);
+  const [isWalkthroughRunning, setIsWalkthroughRunning] = useState(false);
+
+  // Personalized Greeting
+  const firstName = useMemo(() => {
+    if (!user?.name) return "User";
+    return user.name.split(" ")[0];
+  }, [user]);
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  }, []);
   const [prefillData, setPrefillData] = useState<{ amount: number; description: string; category: string } | null>(null);
 
   // Tab State
@@ -541,10 +556,15 @@ export function AppMain({
                   className="flex items-center justify-between mb-6"
                 >
                   <div>
-                    <h1 className={`text-[34px] font-bold tracking-tight leading-tight mb-2 ${isDarkMode ? "text-white" : "text-black"}`}>
-                      Kakeibo
-                    </h1>
-                    <p className={`text-[17px] ${isDarkMode ? "text-white/50" : "text-black/65"}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h1 className={`text-[34px] font-bold tracking-tight leading-tight ${isDarkMode ? "text-white" : "text-black"}`}>
+                        Kakeibo
+                      </h1>
+                    </div>
+                    <p className={`text-[17px] font-medium leading-tight ${isDarkMode ? "text-white/80" : "text-black/80"}`}>
+                      {greeting}, {firstName}
+                    </p>
+                    <p className={`text-[13px] mt-1.5 ${isDarkMode ? "text-white/40" : "text-black/50"}`}>
                       Track today. Plan tomorrow.
                     </p>
                   </div>
@@ -558,8 +578,25 @@ export function AppMain({
                     <button onClick={() => setActiveTab("stats")} className={`w-11 h-11 analytics-section rounded-full flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]" : "bg-white hover:bg-[#f5f5f7]"}`}>
                       <BarChart3 className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`} strokeWidth={2.5} />
                     </button>
-                    <button onClick={() => onOpenSettings?.()} className={`w-11 h-11 rounded-full flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? "bg-[#1c1c1e] hover:bg-[#2c2c2e]" : "bg-white hover:bg-[#f5f5f7]"}`}>
-                      <Settings className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`} strokeWidth={2.5} />
+                    <button 
+                      onClick={() => onOpenSettings?.()} 
+                      className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm overflow-hidden border-2 ${
+                        isDarkMode ? "border-white/10 bg-[#1c1c1e] hover:bg-[#2c2c2e]" : "border-black/5 bg-white hover:bg-[#f5f5f7]"
+                      }`}
+                    >
+                      {user?.picture || user?.avatar ? (
+                        <img 
+                          src={user?.picture || user?.avatar} 
+                          alt="Settings" 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <Settings className={`w-5 h-5 ${isDarkMode ? "text-white" : "text-black"}`} strokeWidth={2.5} />
+                      )}
                     </button>
                   </div>
                 </motion.div>

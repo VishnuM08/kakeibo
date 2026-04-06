@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AppMain } from "./components/AppMain";
 import { AuthScreen } from "./components/AuthScreen";
 import { ResetPasswordScreen } from "./components/ResetPasswordScreen";
@@ -7,7 +7,7 @@ import { PINLockScreen } from "./components/PINLockScreen";
 import { SettingsView } from "./components/SettingsView";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "./utils/toast";
-import { getMe, getAuthToken, removeAuthToken } from "./services/api";
+import { getMe, getAuthToken, setAuthToken, removeAuthToken } from "./services/api";
 import { clearAllLocalData } from "./utils/syncUtils";
 import { Preferences } from "@capacitor/preferences";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -55,17 +55,19 @@ export default function App() {
         try {
           const url = new URL(data.url);
 
-          if (url.pathname === "/auth/success") {
+          if (url.pathname === "/oauth-success") {
             const token = url.searchParams.get("token");
 
             if (token) {
-              console.log("✅ Token received:", token);
+              console.log("✅ Token received via Deep Link:", token);
 
-              // Save token
-              localStorage.setItem("token", token);
-
-              // Navigate to home
-              navigate("/");
+              // Use the correct setAuthToken (which uses Preferences)
+              // We wrap this in an async call and then reload
+              const handleToken = async () => {
+                await setAuthToken(token);
+                window.location.replace("/");
+              };
+              handleToken();
               return;
             }
           }
@@ -82,6 +84,12 @@ export default function App() {
 
     setupDeepLinks();
   }, [navigate]);
+
+  // Keep a fresh reference to the current path for the back listener
+  const currentPath = useRef(location.pathname);
+  useEffect(() => {
+    currentPath.current = location.pathname;
+  }, [location.pathname]);
 
   // Apply Display Scale to root
   useEffect(() => {
@@ -112,19 +120,21 @@ export default function App() {
     );
 
     // Listen for Back Button (Hardware/Gesture)
-    const backListener = CapacitorApp.addListener("backButton", (data) => {
-      if (showSettings) {
-        setShowSettings(false);
+    const backListener = CapacitorApp.addListener("backButton", () => {
+      // Navigate back if we are on a nested route (e.g., /settings)
+      if (currentPath.current !== "/") {
+        navigate(-1);
+      } else {
+        // Exit app if we are on the home screen
+        CapacitorApp.exitApp();
       }
-      // If we are on the main screen and no modals are open, the default behavior (exit) will happen
-      // unless we call data.canGoBack = false (but we want to allow exit from home)
     });
 
     return () => {
       listener.then((l) => l.remove());
       backListener.then((l) => l.remove());
     };
-  }, [showSettings]);
+  }, [navigate]);
 
   // 2. Auth & Security Bootstrap
   useEffect(() => {
@@ -191,6 +201,8 @@ export default function App() {
         // --- STEP B: Background Identity Verification ---
         try {
           const rawData = await getMe();
+          console.log("[Bootstrap] getMe response:", rawData);
+          
           // Normalize (handle nested response or top-level)
           const baseUser = rawData?.user || rawData;
           const userData = {
@@ -203,6 +215,7 @@ export default function App() {
               "User",
           };
 
+          console.log("[Bootstrap] Normalized user data:", userData);
           setUser(userData);
           await Preferences.set({
             key: "user_data",
@@ -379,6 +392,7 @@ export default function App() {
         <ErrorBoundary>
           <Toaster isDarkMode={isDark} position="top-center" />
           <AppMain
+            user={user}
             isDarkMode={isDark}
             themeMode={themeMode}
             onToggleDarkMode={toggleDarkMode}
@@ -451,19 +465,20 @@ export default function App() {
             <Route
               path="/settings"
               element={
-                <SettingsView
-                  onClose={() => navigate("/")}
-                  onLogout={handleLogout}
-                  onEnablePINLock={handleEnablePINLock}
-                  isPINEnabled={isPINEnabled}
-                  userName={user?.name || "User"}
-                  userEmail={user?.email || "user@example.com"}
-                  isDarkMode={isDark}
-                  themeMode={themeMode}
-                  onToggleDarkMode={toggleDarkMode}
-                  displayScale={displayScale}
-                  onSetDisplayScale={setDisplayScale}
-                />
+                  <SettingsView
+                    onClose={() => navigate("/")}
+                    onLogout={handleLogout}
+                    onEnablePINLock={handleEnablePINLock}
+                    isPINEnabled={isPINEnabled}
+                    userName={user?.name || "User"}
+                    userEmail={user?.email || "user@example.com"}
+                    userAvatar={user?.picture || user?.avatar}
+                    isDarkMode={isDark}
+                    themeMode={themeMode}
+                    onToggleDarkMode={toggleDarkMode}
+                    displayScale={displayScale}
+                    onSetDisplayScale={setDisplayScale}
+                  />
               }
             />
             {/* Catch-all for authenticated users */}

@@ -37,6 +37,7 @@ interface SettingsViewProps {
   isPINEnabled: boolean;
   userName: string;
   userEmail: string;
+  userAvatar?: string;
   isDarkMode: boolean;
   themeMode: "light" | "dark" | "oled";
   onToggleDarkMode: () => void;
@@ -51,6 +52,7 @@ export function SettingsView({
   isPINEnabled,
   userName,
   userEmail,
+  userAvatar,
   isDarkMode,
   themeMode,
   onToggleDarkMode,
@@ -164,17 +166,31 @@ export function SettingsView({
             width: 56,
             height: 56,
             borderRadius: "50%",
-            background: "linear-gradient(135deg,#007aff,#0051D5)",
+            background: userAvatar ? "none" : "linear-gradient(135deg,#007aff,#0051D5)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
+            overflow: "hidden",
+            border: isDarkMode ? "2px solid rgba(255,255,255,0.1)" : "2px solid rgba(0,0,0,0.05)"
           }}
         >
-          <User
-            style={{ width: 28, height: 28, color: "#fff" }}
-            strokeWidth={2.5}
-          />
+          {userAvatar ? (
+            <img 
+              src={userAvatar} 
+              alt={userName} 
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <User
+              style={{ width: 28, height: 28, color: "#fff" }}
+              strokeWidth={2.5}
+            />
+          )}
         </div>
         <div>
           <p
@@ -835,8 +851,20 @@ export function SettingsView({
             style={{ background: cardBg, border: borderStyle }}
           >
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051D5] flex items-center justify-center">
-                <User className="w-8 h-8 text-white" strokeWidth={2.5} />
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#007aff] to-[#0051D5] flex items-center justify-center overflow-hidden">
+                {userAvatar ? (
+                  <img 
+                    src={userAvatar} 
+                    alt={userName} 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <User className="w-8 h-8 text-white" strokeWidth={2.5} />
+                )}
               </div>
               <div className="flex-1">
                 <h3 className={`text-[20px] font-bold ${textColor}`}>

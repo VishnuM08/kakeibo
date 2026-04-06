@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { Lock, Mail, User, Eye, EyeOff } from "lucide-react";
-import { login, register, setAuthToken, forgotPassword, baseURL } from "../services/api";
+import {
+  login,
+  register,
+  setAuthToken,
+  forgotPassword,
+  baseURL,
+} from "../services/api";
 import { clearAllLocalData } from "../utils/syncUtils";
 import { Preferences } from "@capacitor/preferences";
-
+import { Capacitor } from "@capacitor/core";
 /**
  * Authentication Screen Component
  * Handles both Login and Registration
@@ -123,7 +129,8 @@ export function AuthScreen({
   };
 
   const handleGoogleAuth = () => {
-    // Redirect to backend OAuth initiation endpoint
+    // Both web and mobile will use the same reliable redirect flow.
+    // The Deep Link in App.tsx will catch the result on mobile.
     window.location.href = `${baseURL}/oauth2/authorization/google`;
   };
 
@@ -383,7 +390,12 @@ export function AuthScreen({
                     : "bg-[#f0f0f5] hover:bg-[#eaeaef] text-black active:bg-[#dcdce1]"
                 }`}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" className="shrink-0">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  className="shrink-0"
+                >
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     fill="#4285F4"

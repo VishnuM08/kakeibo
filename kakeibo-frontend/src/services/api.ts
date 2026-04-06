@@ -11,6 +11,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  picture?: string;
   createdAt: string;
 }
 
@@ -92,7 +93,7 @@ export const removeAuthToken = async (): Promise<void> => {
 // When running in a browser (web) during development, use the /api proxy to avoid CORS issues.
 // When running in production (web or native), use the explicit production URL.
 const isNative = Capacitor.isNativePlatform();
-const apiBaseUrl = ENV.API_BASE_URL || "https://api.kakeibo.theaignite.app";
+const apiBaseUrl = ENV.API_BASE_URL;
 export const baseURL = isNative || ENV.IS_PROD ? apiBaseUrl : "/api";
 
 const api = axios.create({
