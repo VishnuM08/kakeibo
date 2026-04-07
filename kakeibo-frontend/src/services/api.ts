@@ -69,25 +69,53 @@ export interface RegisterRequest {
 
 // ==================== API CONFIGURATION ====================
 
+// Memory fallback for environments that aggressively block IndexedDB/localStorage
+let memoryToken: string | null = null;
+
 export const getAuthToken = async (): Promise<string | null> => {
-  const { value } = await Preferences.get({ key: "auth_token" });
-  return value;
+  try {
+    const { value } = await Preferences.get({ key: "auth_token" });
+    if (value) return value;
+  } catch (e) {}
+
+  try {
+    const local = localStorage.getItem("auth_token_backup");
+    if (local) return local;
+  } catch (e) {}
+  
+  return memoryToken;
 };
 
 /**
  * Set JWT token in Storage
  */
-
 export const setAuthToken = async (token: string): Promise<void> => {
-  await Preferences.set({ key: "auth_token", value: token });
+  memoryToken = token;
+  try {
+     localStorage.setItem("auth_token_backup", token);
+  } catch (e) {
+     console.warn("localStorage blocked", e);
+  }
+  
+  try {
+     await Preferences.set({ key: "auth_token", value: token });
+  } catch (e) {
+     console.warn("Preferences blocked", e);
+  }
 };
 
 /**
  * Remove JWT token from Storage (logout)
  */
-
 export const removeAuthToken = async (): Promise<void> => {
-  await Preferences.remove({ key: "auth_token" });
+  memoryToken = null;
+  try {
+     localStorage.removeItem("auth_token_backup");
+  } catch (e) {}
+  
+  try {
+     await Preferences.remove({ key: "auth_token" });
+  } catch (e) {}
 };
 
 // When running in a browser (web) during development, use the /api proxy to avoid CORS issues.
@@ -196,6 +224,16 @@ export async function getMe() {
 export async function login(credentials: { email: string; password: string }) {
   const response = await api.post("/auth/login", credentials);
   return response.data;
+}
+
+/**
+ * Google Native Login API
+ * POST /auth/google
+ * Exchanges a Google idToken (from native sign-in) for a Kakeibo JWT.
+ */
+export async function loginWithGoogle(idToken: string) {
+  const response = await api.post("/auth/google", { idToken });
+  return response.data as { token: string; user: { id: string; email: string; name: string; picture?: string } };
 }
 
 // TODO: BACKEND INTEGRATION - Replace with actual API call

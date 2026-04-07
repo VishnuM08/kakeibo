@@ -5,11 +5,12 @@ import {
   register,
   setAuthToken,
   forgotPassword,
-  baseURL,
+  loginWithGoogle,
 } from "../services/api";
 import { clearAllLocalData } from "../utils/syncUtils";
 import { Preferences } from "@capacitor/preferences";
 import { Capacitor } from "@capacitor/core";
+import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 /**
  * Authentication Screen Component
  * Handles both Login and Registration
@@ -129,15 +130,45 @@ export function AuthScreen({
   };
 
   const handleGoogleAuth = async () => {
-    // Both web and mobile will use the same reliable redirect flow.
-    // The Deep Link in App.tsx will catch the result on mobile.
-    const url = `${baseURL}/oauth2/authorization/google`;
-    if (Capacitor.isNativePlatform()) {
-      import('@capacitor/browser').then(({ Browser }) => {
-        Browser.open({ url });
+    setIsLoading(true);
+    setError("");
+    try {
+      // Initialize the plugin (required for web)
+      GoogleAuth.initialize({
+        clientId: "460861594388-abvmsc7bsrdqf67hsbk90m4mo36qsgao.apps.googleusercontent.com",
+        scopes: ["profile", "email"],
+        grantOfflineAccess: true,
       });
-    } else {
-      window.location.href = url;
+
+      // On Android: shows native account picker bottom sheet
+      // On Web: shows Google popup
+      const googleUser = await GoogleAuth.signIn();
+      const idToken = googleUser.authentication.idToken;
+
+      if (!idToken) {
+        throw new Error("No ID token received from Google");
+      }
+
+      // Exchange Google idToken for our Kakeibo JWT
+      const response = await loginWithGoogle(idToken);
+      const userData = {
+        name: response.user?.name || (googleUser as any).displayName || googleUser.givenName || "User",
+        email: response.user?.email || googleUser.email,
+        picture: response.user?.picture || googleUser.imageUrl,
+        id: response.user?.id,
+      };
+
+      await setAuthToken(response.token);
+      await Preferences.set({ key: "user_data", value: JSON.stringify(userData) });
+      onAuthSuccess(response.token, userData);
+    } catch (err: any) {
+      console.error("Google Auth Error:", err);
+      // User cancelled the sign-in popup — don't show an error
+      if (err.error !== "popup_closed_by_user" && err.message !== "User cancelled.") {
+        setError(err.message || "Google sign-in failed. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
