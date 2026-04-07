@@ -133,39 +133,72 @@ export function AuthScreen({
     setIsLoading(true);
     setError("");
     try {
-      // Initialize the plugin (required for web)
-      GoogleAuth.initialize({
-        clientId: "460861594388-abvmsc7bsrdqf67hsbk90m4mo36qsgao.apps.googleusercontent.com",
-        scopes: ["profile", "email"],
-        grantOfflineAccess: true,
-      });
+      if (Capacitor.isNativePlatform()) {
+        // ✅ ANDROID: Native account picker bottom sheet via plugin
+        GoogleAuth.initialize({
+          clientId: "460861594388-abvmsc7bsrdqf67hsbk90m4mo36qsgao.apps.googleusercontent.com",
+          scopes: ["profile", "email"],
+        });
+        const googleUser = await GoogleAuth.signIn();
+        const idToken = googleUser.authentication.idToken;
+        if (!idToken) throw new Error("No ID token received from Google");
 
-      // On Android: shows native account picker bottom sheet
-      // On Web: shows Google popup
-      const googleUser = await GoogleAuth.signIn();
-      const idToken = googleUser.authentication.idToken;
+        const response = await loginWithGoogle(idToken);
+        const userData = {
+          name: response.user?.name || (googleUser as any).displayName || googleUser.givenName || "User",
+          email: response.user?.email || googleUser.email,
+          picture: response.user?.picture || googleUser.imageUrl,
+          id: response.user?.id,
+        };
+        await setAuthToken(response.token);
+        await Preferences.set({ key: "user_data", value: JSON.stringify(userData) });
+        onAuthSuccess(response.token, userData);
 
-      if (!idToken) {
-        throw new Error("No ID token received from Google");
+      } else {
+        // ✅ WEB: Google Identity Services (GIS) - works without 3rd-party cookies
+        const win = window as any;
+        if (!win.google?.accounts?.id) {
+          throw new Error("Google Identity Services not loaded. Please refresh and try again.");
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          win.google.accounts.id.initialize({
+            client_id: "460861594388-abvmsc7bsrdqf67hsbk90m4mo36qsgao.apps.googleusercontent.com",
+            callback: async (credentialResponse: any) => {
+              try {
+                const idToken = credentialResponse.credential;
+                const response = await loginWithGoogle(idToken);
+                const userData = {
+                  name: response.user?.name || "User",
+                  email: response.user?.email || "",
+                  picture: response.user?.picture,
+                  id: response.user?.id,
+                };
+                await setAuthToken(response.token);
+                await Preferences.set({ key: "user_data", value: JSON.stringify(userData) });
+                onAuthSuccess(response.token, userData);
+                resolve();
+              } catch (err) {
+                reject(err);
+              }
+            },
+            error_callback: (err: any) => {
+              reject(new Error(err?.message || "Google sign-in failed"));
+            },
+          });
+          // Show the One Tap popup / account chooser
+          win.google.accounts.id.prompt((notification: any) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+              // One Tap was suppressed — fall back to renderButton flow via a hidden div
+              reject(new Error("Google sign-in was dismissed. Please try again."));
+            }
+          });
+        });
       }
-
-      // Exchange Google idToken for our Kakeibo JWT
-      const response = await loginWithGoogle(idToken);
-      const userData = {
-        name: response.user?.name || (googleUser as any).displayName || googleUser.givenName || "User",
-        email: response.user?.email || googleUser.email,
-        picture: response.user?.picture || googleUser.imageUrl,
-        id: response.user?.id,
-      };
-
-      await setAuthToken(response.token);
-      await Preferences.set({ key: "user_data", value: JSON.stringify(userData) });
-      onAuthSuccess(response.token, userData);
     } catch (err: any) {
       console.error("Google Auth Error:", err);
-      // User cancelled the sign-in popup — don't show an error
-      if (err.error !== "popup_closed_by_user" && err.message !== "User cancelled.") {
-        setError(err.message || "Google sign-in failed. Please try again.");
+      if (err?.error !== "popup_closed_by_user" && err?.message !== "User cancelled.") {
+        setError(err?.message || "Google sign-in failed. Please try again.");
       }
     } finally {
       setIsLoading(false);
