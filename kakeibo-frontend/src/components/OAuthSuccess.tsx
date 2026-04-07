@@ -20,8 +20,13 @@ function OAuthSuccess() {
         if (isWebApp && /android|iphone|ipad|ipod/i.test(navigator.userAgent)) {
            const schemeUrl = `com.aignite.kakeibo://oauth-success?token=${token}`;
            
-           // Fire the Custom Scheme intent first to attempt waking up the Native App
-           window.location.href = schemeUrl;
+           // Fire the Custom Scheme intent via a hidden iframe.
+           // This prevents the browser from navigating to an ERR_UNKNOWN_URL_SCHEME page
+           // if the native app is not installed, keeping our javascript context alive!
+           const iframe = document.createElement("iframe");
+           iframe.style.display = "none";
+           iframe.src = schemeUrl;
+           document.body.appendChild(iframe);
            
            // Concurrently schedule a standard web login redirect.
            // If the Native App catches the intent above, it will close this Web Tab before this fires.
