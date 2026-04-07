@@ -55,7 +55,7 @@ export default function App() {
         try {
           const url = new URL(data.url);
 
-          if (url.pathname === "/oauth-success") {
+          if (url.pathname === "/oauth-success" || url.pathname.includes("oauth-success") || url.hostname === "oauth-success") {
             const token = url.searchParams.get("token");
 
             if (token) {
