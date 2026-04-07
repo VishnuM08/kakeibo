@@ -139,6 +139,8 @@ export function AuthScreen({
           clientId: "460861594388-abvmsc7bsrdqf67hsbk90m4mo36qsgao.apps.googleusercontent.com",
           scopes: ["profile", "email"],
         });
+        // Always sign out first to clear cached account — forces the full account picker
+        try { await GoogleAuth.signOut(); } catch (e) {}
         const googleUser = await GoogleAuth.signIn();
         const idToken = googleUser.authentication.idToken;
         if (!idToken) throw new Error("No ID token received from Google");

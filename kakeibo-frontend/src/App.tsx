@@ -12,6 +12,7 @@ import { clearAllLocalData } from "./utils/syncUtils";
 import { Preferences } from "@capacitor/preferences";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
+import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 import {
   Routes,
   Route,
@@ -321,6 +322,10 @@ export default function App() {
   );
 
   const handleLogout = async () => {
+    // Sign out of Google too so the account picker appears fresh on next login
+    if (Capacitor.isNativePlatform()) {
+      try { await GoogleAuth.signOut(); } catch (e) {}
+    }
     await removeAuthToken();
     await Preferences.remove({ key: "user_data" });
     clearAllLocalData();
