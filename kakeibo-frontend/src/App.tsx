@@ -61,6 +61,12 @@ export default function App() {
             if (token) {
               console.log("✅ Token received via Deep Link:", token);
 
+              if (Capacitor.isNativePlatform()) {
+                import("@capacitor/browser").then(({ Browser }) => {
+                  Browser.close();
+                });
+              }
+
               // Use the correct setAuthToken (which uses Preferences)
               // We wrap this in an async call and then reload
               const handleToken = async () => {

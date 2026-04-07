@@ -128,10 +128,17 @@ export function AuthScreen({
     }
   };
 
-  const handleGoogleAuth = () => {
+  const handleGoogleAuth = async () => {
     // Both web and mobile will use the same reliable redirect flow.
     // The Deep Link in App.tsx will catch the result on mobile.
-    window.location.href = `${baseURL}/oauth2/authorization/google`;
+    const url = `${baseURL}/oauth2/authorization/google`;
+    if (Capacitor.isNativePlatform()) {
+      import('@capacitor/browser').then(({ Browser }) => {
+        Browser.open({ url });
+      });
+    } else {
+      window.location.href = url;
+    }
   };
 
   return (
