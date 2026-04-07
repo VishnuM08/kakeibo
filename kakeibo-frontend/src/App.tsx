@@ -448,7 +448,7 @@ export default function App() {
             />
             <Route path="/reset-password" element={resetPasswordElement} />
             <Route path="/verify-email" element={verifyEmailElement} />
-            <Route path="/oauth-success" element={<OAuthSuccess />} />
+            <Route path="/oauth-success" element={<OAuthSuccess onAuthSuccess={handleAuthSuccess} />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </>
         ) : (

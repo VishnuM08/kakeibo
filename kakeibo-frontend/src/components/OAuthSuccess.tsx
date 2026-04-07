@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { setAuthToken, getAuthToken } from "../services/api";
 
-function OAuthSuccess() {
+function OAuthSuccess({ onAuthSuccess }: { onAuthSuccess?: (token: string, userData: any) => void }) {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,13 +31,14 @@ function OAuthSuccess() {
            setTimeout(async () => {
               try {
                  await setAuthToken(token);
-                 setTimeout(() => {
-                    window.location.replace("/");
-                 }, 500);
+                 if (onAuthSuccess) {
+                    onAuthSuccess(token, { name: "User" });
+                    navigate("/", { replace: true });
+                 } else {
+                    setTimeout(() => window.location.replace("/"), 500);
+                 }
               } catch (e) {
-                 setTimeout(() => {
-                    window.location.replace("/login");
-                 }, 500);
+                 setTimeout(() => window.location.replace("/login"), 500);
               }
            }, 1000);
            return;
@@ -46,24 +47,28 @@ function OAuthSuccess() {
         // Standard execution for local environment (or Desktop Web)
         try {
            await setAuthToken(token);
-           // Wait slightly to ensure Capacitor's async Preferences flush to IndexedDB before reloading
-           setTimeout(() => {
-              window.location.replace("/");
-           }, 500);
+           if (onAuthSuccess) {
+              onAuthSuccess(token, { name: "User" });
+              navigate("/", { replace: true });
+           } else {
+              setTimeout(() => window.location.replace("/"), 500);
+         }
         } catch (error) {
            console.error("Failed to store auth token:", error);
-           setTimeout(() => {
-              window.location.replace("/login");
-           }, 500);
+           setTimeout(() => window.location.replace("/login"), 500);
         }
       } else {
         console.warn("No token found in OAuth success URL");
-        window.location.replace("/login");
+        if (onAuthSuccess) {
+           navigate("/login", { replace: true });
+        } else {
+           window.location.replace("/login");
+        }
       }
     };
 
     handleLogin();
-  }, []);
+  }, [navigate, onAuthSuccess]);
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-6">
