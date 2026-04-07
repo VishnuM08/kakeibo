@@ -28,15 +28,16 @@ function OAuthSuccess() {
            iframe.src = schemeUrl;
            document.body.appendChild(iframe);
            
-           // Concurrently schedule a standard web login redirect.
-           // If the Native App catches the intent above, it will close this Web Tab before this fires.
-           // If the Native App isn't installed (real web user), this executes after 1 second, logging them in.
            setTimeout(async () => {
               try {
                  await setAuthToken(token);
-                 window.location.replace("/");
+                 setTimeout(() => {
+                    window.location.replace("/");
+                 }, 500);
               } catch (e) {
-                 window.location.replace("/login");
+                 setTimeout(() => {
+                    window.location.replace("/login");
+                 }, 500);
               }
            }, 1000);
            return;
@@ -45,10 +46,15 @@ function OAuthSuccess() {
         // Standard execution for local environment (or Desktop Web)
         try {
            await setAuthToken(token);
-           window.location.replace("/");
+           // Wait slightly to ensure Capacitor's async Preferences flush to IndexedDB before reloading
+           setTimeout(() => {
+              window.location.replace("/");
+           }, 500);
         } catch (error) {
            console.error("Failed to store auth token:", error);
-           window.location.replace("/login");
+           setTimeout(() => {
+              window.location.replace("/login");
+           }, 500);
         }
       } else {
         console.warn("No token found in OAuth success URL");
