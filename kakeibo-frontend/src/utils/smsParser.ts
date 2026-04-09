@@ -31,6 +31,11 @@ export interface ParsedTransaction {
 export const parseTransactionSMS = (message: string): ParsedTransaction | null => {
   if (!message || message.length < 10) return null;
 
+  // ── 0. EARLY REJECT: OTP, verification, and promotional messages ──────────
+  // These must be checked BEFORE any other parsing to prevent false positives.
+  const isOtpOrPromo = /\b(OTP|One.?Time.?Password|verification code|is your|use this code|do not share|expire|promo|offer|cashback|reward|discount|lucky|win|click|link|subscribe|unsubscribe|FREE|OFFER|SALE|DEAL|congratulations|Dear Customer|valid for|expires in)\b/i;
+  if (isOtpOrPromo.test(message)) return null;
+
   // Stricter check: Must look like a bank or payment transaction
   const bankIndicators = /\b(HDFC|SBI|ICICI|AXIS|BOB|PNB|UNION|CANARA|KOTAK|YES|IDBI|Bank|Acct|A\/c|VPA|UPI|GPay|PhonePe|Paytm|AmazonPay)\b/i;
   // Also check for amount patterns to avoid non-transactional SMS
@@ -38,20 +43,31 @@ export const parseTransactionSMS = (message: string): ParsedTransaction | null =
   
   if (!bankIndicators.test(message) || !hasAmount) return null;
 
-  // 1. AMOUNT EXTRACTION
+  // ── 1. DEBIT REQUIREMENT ─────────────────────────────────────────────────
+  // Only parse the message if it contains an explicit debit keyword.
+  // This is the primary guard against OTPs slipping through.
+  const hasDebitKeyword = /\b(debited|deducted|spent|withdrawn|payment|paid|purchase|dr\b|debit)\b/i.test(message);
+  const hasCreditKeyword = /\b(credited|received|deposited|added|inbound|refunded|reversal|linked|cr\b|credit)\b/i.test(message);
+
+  // Reject messages that have ONLY credit signals and no debit signals
+  if (!hasDebitKeyword && hasCreditKeyword) return null;
+  // Reject messages with neither – too ambiguous
+  if (!hasDebitKeyword && !hasCreditKeyword) return null;
+
+  // 2. AMOUNT EXTRACTION
   // Matches: Rs. 500, Rs 500, INR 500, ₹ 500, 500.00, etc.
   const amountRegex = /(?:Rs\.?|INR|₹|Amt|Amount)\s*([\d,]+(?:\.\d{1,2})?)/i;
   const amountMatch = message.match(amountRegex);
   if (!amountMatch) return null;
   const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
 
-  // 2. TRANSACTION TYPE (Debit vs Credit)
-  let type: 'debit' | 'credit' = 'debit'; // Default to debit (safer for expense tracker)
+  // 3. TRANSACTION TYPE (Debit vs Credit)
+  // At this point we already know hasDebitKeyword is true.
+  let type: 'debit' | 'credit' = 'debit';
   
-  // Prioritize "debited" keywords over "credited" for the account holder's perspective
-  if (/\b(debited|deducted|spent|withdrawn|paid|outbound|txn|tran|purchase)\b/i.test(message)) {
+  if (/\b(debited|deducted|spent|withdrawn|paid|outbound|txn|tran|purchase|payment|dr\b|debit)\b/i.test(message)) {
     type = 'debit';
-  } else if (/\b(credited|received|deposited|added|inbound|refunded|reversal|linked)\b/i.test(message)) {
+  } else if (/\b(credited|received|deposited|added|inbound|refunded|reversal|linked|cr\b|credit)\b/i.test(message)) {
     type = 'credit';
   }
 

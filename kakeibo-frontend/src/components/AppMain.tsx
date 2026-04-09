@@ -289,7 +289,8 @@ export function AppMain({
       const { body } = event.detail || {};
       if (body) {
         const parsed = parseTransactionSMS(body);
-        if (parsed) {
+        // Only queue debit transactions (expenses) — drop OTPs, credits, promos
+        if (parsed && parsed.type === 'debit') {
           setSmsTransactions(prev => {
             if (prev.some(t => t.rawHash === parsed.rawHash)) return prev;
             message.success(`Transaction detected: ₹${parsed.amount}`);
